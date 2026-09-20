@@ -1,9 +1,10 @@
- // src/lib/supabase-server.ts
+ // lib/supabase-server.ts (O kung nasaan ang iyong server client file)
 import { createServerClient } from '@supabase/ssr'
 import { cookies } from 'next/headers'
 
 export async function createSupabaseServer() {
-  const cookieStore = await cookies() // Next.js Asynchronous Cookies Resolving
+  // Await ang asynchronous Next.js cookies engine matrix
+  const cookieStore = await cookies()
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -13,15 +14,20 @@ export async function createSupabaseServer() {
         getAll() {
           return cookieStore.getAll()
         },
-        // 🟢 INAYOS: Nilagyan ng explicit structural array type ({ name: string; value: string; options?: any }[]) 
-        // upang mawala ang pulang guhit at maging 100% safe sa strict mode ng TypeScript!
+        // Explicit type mapping para sa strict system compilation
         setAll(cookiesToSet: { name: string; value: string; options?: any }[]) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              // 🟢 SUCCESS IMPLEMENTATION: Isang buong single object wrapper para sa Next.js native set
+              cookieStore.set({ 
+                name, 
+                value, 
+                ...options, 
+                path: '/' // Tinitiyak na ang session tokens ay gumagana sa global domain hierarchy at subdomains
+              })
             )
           } catch {
-            // Sinasalo ang babala kapag binago ang cookies habang nag-re-redirect sa Middleware/Proxy
+            // Sinasalo ang natural layout engine mutation updates galing sa pure Server Components
           }
         },
       },

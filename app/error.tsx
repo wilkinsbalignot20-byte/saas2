@@ -1,5 +1,5 @@
-// /app/error.tsx
-'use client'; // OBLIGADO: Ang error files sa Next.js ay dapat Client Components
+ // app/error.tsx
+'use client'; // REQUIRED: Error files in Next.js must be Client Components
 
 import { useEffect } from 'react';
 
@@ -10,7 +10,7 @@ interface ErrorProps {
 
 export default function GlobalError({ error, reset }: ErrorProps) {
   useEffect(() => {
-    // I-log ang error sa console para makita mo habang nagde-debug
+    // Log the error to the console for tracking and debugging
     console.error('SaaS App Exception caught:', error);
   }, [error]);
 
@@ -23,14 +23,14 @@ export default function GlobalError({ error, reset }: ErrorProps) {
         </div>
         
         <h2 className="text-xl font-bold text-gray-900 tracking-tight">
-          May naganap na hindi inaasahang error
+          Something went wrong
         </h2>
         
         <p className="text-sm text-gray-500 mt-2 leading-relaxed">
-          Hindi matapos ang iyong hiling sa ngayon. Maaaring may problema sa koneksyon o sa database server.
+          We encountered an unexpected error processing your request. This could be due to a connection issue or a database timeout.
         </p>
 
-        {/* Error Code Digest (kung mayroon) */}
+        {/* Error Code Digest */}
         {error.digest && (
           <p className="text-[10px] font-mono bg-gray-100 text-gray-400 rounded px-2 py-1 mt-3 inline-block">
             Digest ID: {error.digest}
@@ -38,20 +38,20 @@ export default function GlobalError({ error, reset }: ErrorProps) {
         )}
 
         <div className="mt-6 flex flex-col gap-2">
-          {/* Subukang i-reload lang ang apektadong component */}
+          {/* Attempt to recover by trying to re-render the segment */}
           <button
             onClick={() => reset()}
             className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-xl shadow-md active:scale-95 transition-all text-sm"
           >
-            Subukan Ulit (Try Again)
+            Try Again
           </button>
           
-          {/* Bumalik sa main homepage */}
+          {/* Navigate back to the core platform home page */}
           <a
             href="/"
             className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 px-4 rounded-xl transition-all text-sm inline-block"
           >
-            Bumalik sa Home
+            Return to Homepage
           </a>
         </div>
       </div>
