@@ -1,6 +1,9 @@
-  // src/app/page.tsx
+// src/app/page.tsx
+'use client'; // 🌟 Kinailangan nating lagyan ng use client dahil interactive na ang mga letra gamit ang GSAP
+
 import Link from 'next/link';
 import { Plus } from 'lucide-react';
+import TextType from '@/app/components/TextType/TextType'; // 🌟 Inimport natin ang hiwalay mong component
 
 const FAQ_ITEMS = [
   {
@@ -55,7 +58,6 @@ export default function SaasLandingPage() {
             >
               Log in
             </Link>
-            {/* 🟢 RE-ALIGNMENT FIXED: Itinama pabalik sa saktong /signup folder name mo nang walang gitling */}
             <Link
               href="/seller/signup"
               className="text-sm font-semibold px-4 py-2 rounded-full bg-ink text-paper hover:bg-ink/90 transition-colors"
@@ -81,9 +83,8 @@ export default function SaasLandingPage() {
             stock behind the scenes.
           </p>
           <div className="flex flex-wrap items-center gap-4">
-            {/* 🟢 RE-ALIGNMENT FIXED: Itinama pabalik sa saktong /signup folder name mo nang walang gitling */}
             <Link
-              href="/signup"
+              href="/seller/signup"
               className="inline-flex items-center gap-2 bg-ink text-paper font-semibold px-6 py-3.5 rounded-full hover:bg-ink/90 transition-colors"
             >
               Start your store
@@ -98,13 +99,21 @@ export default function SaasLandingPage() {
           <p className="text-sm text-ink/40 mt-6">No credit card required to start.</p>
         </div>
 
-        {/* 🏪 DYNAMIC STOREFRONT STACK AREA */}
+        {/* 🏪 DYNAMIC STOREFRONT STACK AREA (PINAGANDA ANG MGA LETRA!) */}
         <div className="relative h-[420px] hidden lg:block">
           
           {/* BOX 1: Manipu Wear */}
           <Link href="/explore" className="absolute top-0 left-4 w-72 -rotate-6 rounded-2xl bg-ink text-paper p-5 shadow-xl block hover:-translate-y-1 transition-transform cursor-pointer group select-none overflow-hidden">
             <div className="flex items-center justify-between mb-4">
-              <span className="font-display font-semibold text-sm group-hover:text-marigold transition-colors">Manipu Wear</span>
+              {/* 🌟 Ginamitan ng TextType para mag-type ang letra ng brand */}
+              <span className="font-display font-semibold text-sm group-hover:text-marigold transition-colors">
+                <TextType 
+                  text={["Manipu Wear", "Streetwear PH", "Custom Fit"]}
+                  typingSpeed={80}
+                  pauseDuration={2000}
+                  cursorCharacter="_"
+                />
+              </span>
               <span className="w-2 h-2 rounded-full bg-marigold" />
             </div>
             
@@ -115,7 +124,6 @@ export default function SaasLandingPage() {
                 className="w-full h-full object-cover pointer-events-none" 
               />
             </div>
-
             <div className="h-2 w-3/4 rounded bg-paper/20 mb-2" />
             <div className="h-2 w-1/2 rounded bg-paper/20" />
           </Link>
@@ -130,7 +138,15 @@ export default function SaasLandingPage() {
           {/* BOX 2: Infinity Gems Coffee */}
           <Link href="/explore" className="absolute top-24 right-2 w-72 rotate-3 rounded-2xl bg-teal text-white p-5 shadow-xl block hover:-translate-y-1 transition-transform cursor-pointer group select-none overflow-hidden">
             <div className="flex items-center justify-between mb-4">
-              <span className="font-display font-semibold text-sm group-hover:text-marigold transition-colors">Coffee Shop</span>
+              {/* 🌟 Typing effect para sa Coffee Shop */}
+              <span className="font-display font-semibold text-sm group-hover:text-marigold transition-colors">
+                <TextType 
+                  text={["Coffee Shop", "Brewed Daily", "Barista Choice"]}
+                  typingSpeed={60}
+                  pauseDuration={1800}
+                  cursorCharacter="|"
+                />
+              </span>
               <span className="w-2 h-2 rounded-full bg-white" />
             </div>
             
@@ -141,7 +157,6 @@ export default function SaasLandingPage() {
                 className="w-full h-full object-cover pointer-events-none" 
               />
             </div>
-
             <div className="h-2 w-2/3 rounded bg-white/25 mb-2" />
             <div className="h-2 w-1/3 rounded bg-white/25" />
           </Link>
@@ -149,7 +164,15 @@ export default function SaasLandingPage() {
           {/* BOX 3: Sariling Tindahan */}
           <Link href="/explore" className="absolute bottom-0 left-16 w-72 -rotate-2 rounded-2xl bg-white border border-ink/10 p-5 shadow-xl block hover:-translate-y-1 transition-transform cursor-pointer group select-none overflow-hidden">
             <div className="flex items-center justify-between mb-4">
-              <span className="font-display font-semibold text-sm text-ink group-hover:text-marigold transition-colors">Sariling Tindahan</span>
+              {/* 🌟 Typing effect para sa Sariling Tindahan */}
+              <span className="font-display font-semibold text-sm text-ink group-hover:text-marigold transition-colors">
+                <TextType 
+                  text={["Sariling Tindahan", "Lokal Goods", "Mabilis Payout"]}
+                  typingSpeed={90}
+                  pauseDuration={2500}
+                  cursorCharacter="▮"
+                />
+              </span>
               <span className="w-2 h-2 rounded-full bg-coral" />
             </div>
             
@@ -166,10 +189,11 @@ export default function SaasLandingPage() {
         </div>
       </section>
 
-      {/* AUDIENCES: sellers vs shoppers */}
+      {/* AUDIENCES */}
       <section id="audiences" className="border-t border-ink/10">
         <div className="max-w-6xl mx-auto px-6 py-20 grid md:grid-cols-2 gap-px bg-ink/10">
           <div className="bg-paper p-10">
+          {/* KASUNOD NG: <div className="bg-paper p-10"> sa For Sellers block */}
             <p className="text-sm font-semibold text-marigold-dark mb-3">For sellers</p>
             <h2 className="font-display font-bold text-2xl mb-4">
               Run your tindahan from one dashboard
@@ -179,14 +203,15 @@ export default function SaasLandingPage() {
               <li>Print shipping labels for J&amp;T, Flash, SPX</li>
               <li>Track your balance and payouts</li>
             </ul>
-            {/* 🟢 RE-ALIGNMENT FIXED: Itinama ang link mula /sign-up pabalik sa /signup */}
             <Link
-              href="/signup"
+              href="/seller/signup"
               className="inline-flex items-center gap-2 font-semibold text-ink border-b-2 border-marigold pb-0.5"
             >
               Create a seller account
             </Link>
           </div>
+
+          {/* FOR SHOPPERS BLOCK */}
           <div className="bg-paper p-10">
             <p className="text-sm font-semibold text-teal mb-3">For shoppers</p>
             <h2 className="font-display font-bold text-2xl mb-4">
@@ -197,9 +222,8 @@ export default function SaasLandingPage() {
               <li>Track orders from checkout to delivery</li>
               <li>Chat with the seller in real time</li>
             </ul>
-            {/* 🟢 RE-ALIGNMENT FIXED: Itinama ang link mula /sign-up pabalik sa /signup */}
             <Link
-              href="/signup"
+              href="/seller/signup"
               className="inline-flex items-center gap-2 font-semibold text-ink border-b-2 border-teal pb-0.5"
             >
               Create a shopper account
@@ -311,9 +335,8 @@ export default function SaasLandingPage() {
             <p className="text-sm">The storefront platform for independent merchants.</p>
           </div>
           <div className="flex items-center gap-6 text-sm">
-            <Link href="/login" className="hover:text-paper transition-colors">Log in</Link>
-            {/* 🟢 RE-ALIGNMENT FIXED: Itinama ang link mula /sign-up pabalik sa /signup sa footer */}
-            <Link href="/signup" className="hover:text-paper transition-colors">Sign up</Link>
+            <Link href="/seller/login" className="hover:text-paper transition-colors">Log in</Link>
+            <Link href="/seller/signup" className="hover:text-paper transition-colors">Sign up</Link>
             <span className="text-paper/30">© 2026 Manipu</span>
           </div>
         </div>

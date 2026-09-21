@@ -108,24 +108,6 @@ export default function SellerLoginPage() {
         {/* Gradient overlay for precise typography legibility */}
         <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/75 to-ink/30 z-10" />
 
-        {/* Floating active merchant showcase structural preview cards */}
-        <div className="absolute top-16 right-6 z-20 hidden xl:block">
-          <div className="w-48 -rotate-6 rounded-2xl bg-paper/10 border border-paper/10 p-4 backdrop-blur-md shadow-xl mb-4 ml-8">
-            <div className="flex items-center justify-between mb-3">
-              <span className="font-display font-semibold text-xs tracking-tight text-paper">Manipu Wear</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-marigold)]" />
-            </div>
-            <div className="h-14 rounded-xl bg-[var(--color-marigold)]/10 border border-[var(--color-marigold)]/20" />
-          </div>
-          <div className="w-48 rotate-3 rounded-2xl bg-paper/10 border border-paper/10 p-4 backdrop-blur-md shadow-xl">
-            <div className="flex items-center justify-between mb-3">
-              <span className="font-display font-semibold text-xs tracking-tight text-paper">Infinity Gems Coffee</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-[var(--color-teal)]" />
-            </div>
-            <div className="h-14 rounded-xl bg-[var(--color-teal)]/10 border border-[var(--color-teal)]/20" />
-          </div>
-        </div>
-
         {/* Header link branding context */}
         <div className="relative z-20">
           <Link href="/" className="font-display font-black text-2xl tracking-tight text-paper hover:opacity-80 transition-opacity uppercase">
