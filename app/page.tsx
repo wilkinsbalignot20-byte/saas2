@@ -5,6 +5,19 @@ import Hero from '@/components/Hero';
 import FAQSection from '@/components/FAQSection';
 
 export default function SaasLandingPage() {
+  // Ang iyong Cloudinary Cloud Name na galing sa .env.local
+  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+
+  // Ang 3 Public IDs mula sa iyong dashboard (I-update ang dalawang huli kung iba ang pangalan nila)
+  const videoId1 = "wear";
+  const videoId2 = "coffee"; 
+  const videoId3 = "tindahan";      
+
+  // Pagbuo ng direktang optimized video URLs mula sa Cloudinary
+  const videoUrl1 = `https://cloudinary.com{cloudName}/video/upload/q_auto,f_auto/${videoId1}.mp4`;
+  const videoUrl2 = `https://cloudinary.com{cloudName}/video/upload/q_auto,f_auto/${videoId2}.mp4`;
+  const videoUrl3 = `https://cloudinary.com{cloudName}/video/upload/q_auto,f_auto/${videoId3}.mp4`;
+
   return (
     <div className="min-h-screen bg-paper text-ink font-body antialiased">
       {/* 1. NAVBAR COMPONENT */}
@@ -61,6 +74,24 @@ export default function SaasLandingPage() {
             <p className="font-display font-bold text-4xl text-marigold mb-4">3</p>
             <h3 className="font-semibold mb-2">Start selling</h3>
             <p className="text-sm text-ink/60 leading-relaxed">Share your store link and start taking orders the same day.</p>
+          </div>
+        </div>
+      </section>
+
+      {/* NEW SECTION: TATLONG VIDEO GALING SA CLOUDINARY (Optimized at No-Lag) */}
+      <section className="border-t border-ink/10 bg-paper">
+        <div className="max-w-6xl mx-auto px-6 py-20">
+          <h2 className="font-display font-bold text-2xl mb-10 text-center">Tingnan ang Aming Tindahan sa Aksyon</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="overflow-hidden rounded-xl border border-ink/10 bg-paper shadow-sm">
+              <video src={videoUrl1} autoPlay loop muted playsInline className="w-full h-full object-cover aspect-video md:aspect-square" />
+            </div>
+            <div className="overflow-hidden rounded-xl border border-ink/10 bg-paper shadow-sm">
+              <video src={videoUrl2} autoPlay loop muted playsInline className="w-full h-full object-cover aspect-video md:aspect-square" />
+            </div>
+            <div className="overflow-hidden rounded-xl border border-ink/10 bg-paper shadow-sm">
+              <video src={videoUrl3} autoPlay loop muted playsInline className="w-full h-full object-cover aspect-video md:aspect-square" />
+            </div>
           </div>
         </div>
       </section>
