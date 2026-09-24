@@ -1,4 +1,4 @@
-// components/Navbar.tsx
+ // components/Navbar.tsx
 import Link from 'next/link';
 
 export default function Navbar() {
@@ -11,6 +11,8 @@ export default function Navbar() {
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-ink/70">
           <a href="#how-it-works" className="hover:text-ink transition-colors">How it works</a>
           <a href="#audiences" className="hover:text-ink transition-colors">For sellers</a>
+          {/* 🆕 ADDED ABOUT LINK */}
+          <Link href="/about" className="hover:text-ink transition-colors">About</Link>
           <a href="#faq" className="hover:text-ink transition-colors">FAQ</a>
           <Link href="/explore" className="hover:text-ink transition-colors">Explore stores</Link>
         </nav>

@@ -5,19 +5,6 @@ import Hero from '@/components/Hero';
 import FAQSection from '@/components/FAQSection';
 
 export default function SaasLandingPage() {
-  // Ang iyong Cloudinary Cloud Name na galing sa .env.local
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
-
-  // Ang 3 Public IDs mula sa iyong dashboard (I-update ang dalawang huli kung iba ang pangalan nila)
-  const videoId1 = "wear";
-  const videoId2 = "coffee"; 
-  const videoId3 = "tindahan";      
-
-  // Pagbuo ng direktang optimized video URLs mula sa Cloudinary
-  const videoUrl1 = `https://cloudinary.com{cloudName}/video/upload/q_auto,f_auto/${videoId1}.mp4`;
-  const videoUrl2 = `https://cloudinary.com{cloudName}/video/upload/q_auto,f_auto/${videoId2}.mp4`;
-  const videoUrl3 = `https://cloudinary.com{cloudName}/video/upload/q_auto,f_auto/${videoId3}.mp4`;
-
   return (
     <div className="min-h-screen bg-paper text-ink font-body antialiased">
       {/* 1. NAVBAR COMPONENT */}
@@ -78,24 +65,6 @@ export default function SaasLandingPage() {
         </div>
       </section>
 
-      {/* NEW SECTION: TATLONG VIDEO GALING SA CLOUDINARY (Optimized at No-Lag) */}
-      <section className="border-t border-ink/10 bg-paper">
-        <div className="max-w-6xl mx-auto px-6 py-20">
-          <h2 className="font-display font-bold text-2xl mb-10 text-center">Tingnan ang Aming Tindahan sa Aksyon</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="overflow-hidden rounded-xl border border-ink/10 bg-paper shadow-sm">
-              <video src={videoUrl1} autoPlay loop muted playsInline className="w-full h-full object-cover aspect-video md:aspect-square" />
-            </div>
-            <div className="overflow-hidden rounded-xl border border-ink/10 bg-paper shadow-sm">
-              <video src={videoUrl2} autoPlay loop muted playsInline className="w-full h-full object-cover aspect-video md:aspect-square" />
-            </div>
-            <div className="overflow-hidden rounded-xl border border-ink/10 bg-paper shadow-sm">
-              <video src={videoUrl3} autoPlay loop muted playsInline className="w-full h-full object-cover aspect-video md:aspect-square" />
-            </div>
-          </div>
-        </div>
-      </section>
-
       {/* 5. FEATURE TAGS SECTION */}
       <section className="border-t border-ink/10 bg-ink text-paper">
         <div className="max-w-6xl mx-auto px-6 py-20">
@@ -125,10 +94,26 @@ export default function SaasLandingPage() {
         </div>
       </section>
 
-      {/* 6. FAQ COMPONENT */}
+      {/* 🆕 6. ABOUT TEASER SECTION */}
+      <section id="about-teaser" className="border-t border-ink/10 bg-paper">
+        <div className="max-w-6xl mx-auto px-6 py-24 text-center">
+          <p className="text-sm font-semibold text-marigold mb-3 uppercase tracking-wider">Our Story</p>
+          <h2 className="font-display font-bold text-3xl md:text-4xl mb-6 max-w-2xl mx-auto">
+            Built for the modern Filipino storefront
+          </h2>
+          <p className="text-ink/60 text-base max-w-2xl mx-auto mb-8 leading-relaxed">
+            Manipu was started to bridge the gap between traditional retail operations and digital e-commerce. We build high-utility, simple tools for self-reliant businesses to control their growth.
+          </p>
+          <Link href="/about" className="inline-flex items-center gap-2 font-semibold text-ink border-b-2 border-ink pb-0.5 hover:text-marigold hover:border-marigold transition-colors">
+            Read more about our vision →
+          </Link>
+        </div>
+      </section>
+
+      {/* 7. FAQ COMPONENT */}
       <FAQSection />
 
-      {/* 7. FOOTER SECTION */}
+      {/* 8. FOOTER SECTION */}
       <footer id="explore" className="bg-ink text-paper/60 border-t border-paper/10">
         <div className="max-w-6xl mx-auto px-6 py-12 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
