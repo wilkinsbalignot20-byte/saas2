@@ -1,6 +1,7 @@
 // components/onboarding/StepStorefront.tsx
 'use client';
 
+import Image from 'next/image';
 import React from 'react';
 
 interface StepStorefrontProps {
@@ -48,7 +49,7 @@ export default function StepStorefront({
         <div className="flex items-center gap-4 bg-paper border border-ink/15 rounded-xl p-3">
           <div className="h-12 w-12 rounded-lg bg-ink/5 border border-ink/10 flex items-center justify-center overflow-hidden shrink-0">
             {logoPreview ? (
-              <img src={logoPreview} alt="Preview" className="h-full w-full object-cover" />
+              <Image src={logoPreview} alt="Preview" width={48} height={48} unoptimized className="h-full w-full object-cover" />
             ) : (
               <span className="text-xs text-ink/30 font-mono">No Logo</span>
             )}

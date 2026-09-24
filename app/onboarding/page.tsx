@@ -116,9 +116,10 @@ function SellerOnboardingPageContent() {
       if (storeError) throw storeError;
       setLoading(false);
       setMessage('success');
-    } catch (error: any) {
+    } catch (error: unknown) {
       setLoading(false);
-      setMessage(`Onboarding Error: ${error.message}`);
+      const message = error instanceof Error ? error.message : 'Unknown onboarding error';
+      setMessage(`Onboarding Error: ${message}`);
     }
   };
 
