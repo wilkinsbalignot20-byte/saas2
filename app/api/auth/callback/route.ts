@@ -1,4 +1,4 @@
-// app/api/auth/callback/route.ts
+ // app/api/auth/callback/route.ts
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { createServerClient } from '@supabase/ssr'
@@ -6,9 +6,9 @@ import { createServerClient } from '@supabase/ssr'
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-  
-  // Kung may "next" parameter sa URL, doon natin sila ipadadala pagkatapos ma-verify (default ay /onboarding)
-  const next = searchParams.get('next') ?? '/onboarding'
+
+  const rawNext = searchParams.get('next')
+  const next = rawNext && rawNext.startsWith('/') ? rawNext : '/onboarding'
 
   if (code) {
     const cookieStore = await cookies()

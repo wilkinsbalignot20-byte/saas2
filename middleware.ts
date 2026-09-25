@@ -1,14 +1,13 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
-import { createServerClient } from '@supabase/ssr'
+ import { createServerClient } from '@supabase/ssr'
+import { NextResponse, type NextRequest } from 'next/server'
 
 export async function middleware(request: NextRequest) {
-  const response = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
+  // 1. Gumawa ng panimulang response (Hayaan lang dumaan ang request)
+  let supabaseResponse = NextResponse.next({
+    request,
   })
 
+  // 2. I-initialize ang Supabase gamit ang SAPILITANG getAll at setAll na simple lang
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -17,57 +16,31 @@ export async function middleware(request: NextRequest) {
         getAll() {
           return request.cookies.getAll()
         },
-        setAll(cookiesToSet: Array<{ name: string; value: string; options?: Record<string, unknown> }>) {
-          cookiesToSet.forEach(({ name, value, options }) => {
-            response.cookies.set(name, value, options)
+        // Gumamit ng 'any[]' para walang pulang linya sa TypeScript mo
+        setAll(cookiesToSet: any[]) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          
+          supabaseResponse = NextResponse.next({
+            request,
           })
+
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
         },
       },
     }
   )
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
+  // 3. Basahin lang ang user session para mag-refresh ang auth token
+  await supabase.auth.getUser()
 
-  const url = request.nextUrl.clone()
-  const pathname = url.pathname
-
-  const isAuthPage = pathname.startsWith('/login') || pathname.startsWith('/signup')
-  const isProtectedRoute =
-    pathname.startsWith('/onboarding') ||
-    pathname.startsWith('/seller') ||
-    pathname.startsWith('/dashboard')
-
-  if (!user && isProtectedRoute) {
-    return NextResponse.redirect(new URL('/unauthorized', request.url))
-  }
-
-  if (user && !pathname.startsWith('/api')) {
-    const { data: store } = await supabase
-      .from('stores')
-      .select('slug')
-      .eq('owner_id', user.id)
-      .maybeSingle()
-
-    if (store && (pathname === '/onboarding' || isAuthPage)) {
-      return NextResponse.redirect(new URL(`/dashboard/${store.slug}`, request.url))
-    }
-
-    if (!store && (pathname.startsWith('/seller') || pathname.startsWith('/dashboard'))) {
-      return NextResponse.redirect(new URL('/onboarding', request.url))
-    }
-
-    if (pathname === '/forbidden') {
-      return NextResponse.redirect(new URL('/forbidden', request.url))
-    }
-  }
-
-  return response
+  // 4. Ibalik ang response nang walang harang o redirect
+  return supabaseResponse
 }
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)\$).*)',
   ],
 }

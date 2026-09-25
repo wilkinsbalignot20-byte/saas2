@@ -2,7 +2,7 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import AuthSidebar from '@/components/AuthSidebar';
 import { Mail, Lock, ArrowRight, RefreshCw, AlertCircle } from 'lucide-react';
@@ -10,12 +10,18 @@ import { createClient } from '@/lib/supabase/client';
 
 export default function SellerLoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const supabase = createClient();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const nextPath = (() => {
+    const next = searchParams.get('next');
+    return next && next.startsWith('/') ? next : '/onboarding';
+  })();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +31,7 @@ export default function SellerLoginPage() {
     try {
       const { data, error: authError } = await supabase.auth.signInWithPassword({ email, password });
       if (authError) throw authError;
-      if (data.user) router.push('/seller');
+      if (data.user) router.push(nextPath);
     } catch (err: any) {
       setError(err.message || 'Unable to sign in. Please check your credentials.');
     } finally {
@@ -37,10 +43,11 @@ export default function SellerLoginPage() {
     setLoading(true);
     setError('');
     try {
+      const callbackUrl = `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(nextPath)}`;
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/api/auth/callback`,
+          redirectTo: callbackUrl,
           queryParams: { access_type: 'offline', prompt: 'consent' },
         },
       });
@@ -55,10 +62,11 @@ export default function SellerLoginPage() {
     setLoading(true);
     setError('');
     try {
+      const callbackUrl = `${window.location.origin}/api/auth/callback?next=${encodeURIComponent(nextPath)}`;
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
         provider: 'facebook',
         options: {
-          redirectTo: `${window.location.origin}/api/auth/callback`,
+          redirectTo: callbackUrl,
         },
       });
       if (oauthError) throw oauthError;

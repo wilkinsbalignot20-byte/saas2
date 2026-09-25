@@ -131,8 +131,17 @@ function SellerOnboardingPageContent() {
           <div className="w-16 h-16 bg-ink/5 text-ink text-3xl flex items-center justify-center rounded-full mx-auto mb-6">🚀</div>
           <h2 className="font-display font-bold text-3xl mb-2">Setup Complete!</h2>
           <p className="text-sm text-ink/60 mb-6 leading-relaxed">Welcome aboard <span className="font-semibold text-ink">{ownerName}</span>! Your store is now active live at:</p>
-          <div className="bg-ink/5 p-3 rounded-xl font-mono text-sm mb-8 select-all">://manipu.com{storeSlug}</div>
-          <button onClick={() => router.push(`/dashboard/${storeSlug}`)} className="w-full bg-ink text-paper font-semibold py-3.5 rounded-full text-sm hover:bg-ink/90 transition shadow-sm cursor-pointer">Go to Seller Dashboard</button>
+          <div className="bg-ink/5 p-3 rounded-xl font-mono text-sm mb-8 select-all">://://manipu.com{storeSlug}</div>
+          
+          <button 
+            onClick={() => {
+              router.refresh();
+              router.push(`/dashboard/${storeSlug}`);
+            }} 
+            className="w-full bg-ink text-paper font-semibold py-3.5 rounded-full text-sm hover:bg-ink/90 transition shadow-sm cursor-pointer"
+          >
+            Go to Seller Dashboard
+          </button>
         </div>
       </div>
     );
