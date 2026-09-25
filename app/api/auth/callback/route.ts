@@ -1,49 +1,40 @@
- // app/api/auth/callback/route.ts
-import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
-import { createServerClient } from '@supabase/ssr'
+ import { NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server' // Siguraduhing tama ang alias path mo sa lib
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
-
   const rawNext = searchParams.get('next')
-  const next = rawNext && rawNext.startsWith('/') ? rawNext : '/onboarding'
 
   if (code) {
-    const cookieStore = await cookies()
-    
-    // Gagawa tayo ng Server Client para ligtas na mai-save ang cookies sa server-side
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() {
-            return cookieStore.getAll()
-          },
-          setAll(cookiesToSet: Array<{ name: string; value: string; options: any }>) {
-            try {
-              cookiesToSet.forEach(({ name, value, options }) =>
-                cookieStore.set(name, value, options)
-              )
-            } catch {
-              // Ang setAll ay pwedeng mag-fail kung tinawag mula sa Server Component. Safe itong i-ignore dito.
-            }
-          },
-        },
-      }
-    )
+    // I-call lang ang malinis mong helper function
+    const supabase = await createClient()
 
-    // 🚀 ENGINE EXCHANGE: Ipapalit ang temporary code para sa permanenteng User Session Token
-    const { error } = await supabase.auth.exchangeCodeForSession(code)
+    // 1. I-exchange ang auth code para sa permanenteng User Session Token
+    const { data: authData, error: authError } = await supabase.auth.exchangeCodeForSession(code)
     
-    if (!error) {
-      // Kapag matagumpay ang palitan, ipadala sila sa /onboarding (o sa link na nasa 'next')
-      return NextResponse.redirect(`${origin}${next}`)
+    if (!authError && authData?.user) {
+      const user = authData.user
+
+      // 2. MAG-QUERY SA DATABASE: Hanapin ang slug ng store gamit ang 'owner_id'
+      const { data: store } = await supabase
+        .from('stores')
+        .select('slug')
+        .eq('owner_id', user.id)
+        .maybeSingle()
+
+      // 3. REDIRECTION FLOW:
+      if (store?.slug) {
+        // Kung may tindahan na, papasukin direkta sa dashboard/[slug]
+        return NextResponse.redirect(`${origin}/dashboard/${store.slug}`)
+      } else {
+        // Kung walang nahanap na tindahan, ipadala sa onboarding setup form
+        const destination = rawNext && rawNext.startsWith('/') ? rawNext : '/onboarding'
+        return NextResponse.redirect(`${origin}${destination}`)
+      }
     }
   }
 
-  // Kung nagkaroon ng matinding error sa handshake, ibalik sila sa login page na may error token
+  // Kung nagkaroon ng error sa handshake, ibalik sila sa login page
   return NextResponse.redirect(`${origin}/login?error=auth_callback_failed`)
 }
