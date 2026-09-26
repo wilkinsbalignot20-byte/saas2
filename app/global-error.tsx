@@ -1,7 +1,7 @@
- // app/global-error.tsx
-'use client'; // REQUIRED: Root-level error boundaries must be Client Components
+ 'use client'; // REQUIRED: Root-level error boundaries must be Client Components
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation'; // Idinagdag para sa ligtas na Client-side navigation
 import { AlertTriangle, RotateCw } from 'lucide-react';
 
 interface GlobalErrorProps {
@@ -10,6 +10,8 @@ interface GlobalErrorProps {
 }
 
 export default function GlobalError({ error, reset }: GlobalErrorProps) {
+  const router = useRouter(); // I-initialize ang router
+
   useEffect(() => {
     // I-log ang fatal error para sa debugging
     console.error('Root-level application error:', error);
@@ -50,12 +52,13 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
               Try again
             </button>
 
-            <a
-              href="/"
-              className="inline-block w-full rounded-xl bg-white px-4 py-2.5 text-[13px] font-semibold text-[#17221C] transition-all hover:bg-white/90"
+            {/* FIX: Pinalitan ang <a> tag ng <button> na may router.push('/') para sa mabilis at ligtas na client-side transition */}
+            <button
+              onClick={() => router.push('/')}
+              className="inline-block w-full rounded-xl bg-white px-4 py-2.5 text-[13px] font-semibold text-[#17221C] transition-all hover:bg-white/90 text-center cursor-pointer"
             >
               Back to home
-            </a>
+            </button>
           </div>
         </div>
       </body>

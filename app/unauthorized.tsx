@@ -1,5 +1,4 @@
-// src/app/unauthorized.tsx
-'use client';
+ 'use client';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -14,16 +13,18 @@ export default function Unauthorized() {
         <div className="grid grid-cols-1 items-center gap-10 md:grid-cols-2">
           {/* COPY */}
           <div className="space-y-5">
+            {/* FIX 1: Pinalitan ang raw ' ng &apos; */}
             <span className="text-[12.5px] font-medium text-[#7C8A82]">
-              Looks like you're not signed in.
+              Looks like you&apos;re not signed in.
             </span>
 
             <h1 className="font-display text-[32px] font-bold leading-tight tracking-tight text-white md:text-[38px]">
               Please sign in to access this page.
             </h1>
 
+            {/* FIX 2: Ibalot sa curly braces ang text na may apostrophe para 100% safe */}
             <p className="max-w-sm text-[13.5px] leading-relaxed text-[#A7B1AB]">
-              It only takes a moment — we'll take you right back here after.
+              {"It only takes a moment — we'll take you right back here after."}
             </p>
 
             <div className="flex items-center gap-3 pt-2">

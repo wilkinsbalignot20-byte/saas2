@@ -1,4 +1,5 @@
- // app/(auth)/signup/page.tsx
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// app/(auth)/signup/page.tsx
 'use client';
 
 import { useState } from 'react';

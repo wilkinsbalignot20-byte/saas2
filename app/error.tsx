@@ -1,7 +1,7 @@
- // app/error.tsx
-'use client'; // REQUIRED: Error files in Next.js must be Client Components
+ 'use client'; // REQUIRED: Error files in Next.js must be Client Components
 
 import { useEffect } from 'react';
+import { useRouter } from 'next/navigation'; // Idinagdag para sa ligtas na Client-side navigation
 
 interface ErrorProps {
   error: Error & { digest?: string };
@@ -9,6 +9,8 @@ interface ErrorProps {
 }
 
 export default function GlobalError({ error, reset }: ErrorProps) {
+  const router = useRouter(); // I-initialize ang router
+
   useEffect(() => {
     // Log the error to the console for tracking and debugging
     console.error('SaaS App Exception caught:', error);
@@ -41,18 +43,18 @@ export default function GlobalError({ error, reset }: ErrorProps) {
           {/* Attempt to recover by trying to re-render the segment */}
           <button
             onClick={() => reset()}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-xl shadow-md active:scale-95 transition-all text-sm"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-xl shadow-md active:scale-95 transition-all text-sm cursor-pointer"
           >
             Try Again
           </button>
           
-          {/* Navigate back to the core platform home page */}
-          <a
-            href="/"
-            className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 px-4 rounded-xl transition-all text-sm inline-block"
+          {/* FIX: Pinalitan ang <a> tag ng <button> na may router.push('/') para sa mabilis at ligtas na client-side transition */}
+          <button
+            onClick={() => router.push('/')}
+            className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-2.5 px-4 rounded-xl transition-all text-sm inline-block cursor-pointer text-center"
           >
             Return to Homepage
-          </a>
+          </button>
         </div>
       </div>
     </div>

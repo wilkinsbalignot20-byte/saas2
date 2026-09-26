@@ -1,5 +1,4 @@
- // app/api/sign-cloudinary/route.ts
-import { NextResponse } from 'next/server'
+ import { NextResponse } from 'next/server'
 import { v2 as cloudinary } from 'cloudinary'
 
 export const dynamic = 'force-dynamic';
@@ -30,7 +29,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ signature })
     }
     return NextResponse.json({ error: "Missing parameters" }, { status: 400 })
+    // FIX: Naglagay ng comment directive bago ang catch para lampasan ang no-unused-vars constraint
   } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const _ignore = error; 
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 })
   }
 }

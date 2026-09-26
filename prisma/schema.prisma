@@ -1,0 +1,32 @@
+ generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Store {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // STEP 3: STORE CONFIGURATION & DESIGN
+  name             String
+  slug             String   @unique
+  themeColor       String   @default("#E8A33D") @map("theme_color")
+  logoUrl          String?  @map("logo_url")
+  backgroundPreset String   @default("bg-slate-50") @map("background_preset")
+  status           String   @default("active")
+
+  // STEP 1 & AUTH CONNECTIONS
+  ownerId          String   @map("owner_id") @db.Uuid
+  ownerName        String   @map("owner_name")
+
+  // STEP 2: BUSINESS IDENTITY & COURIER
+  businessName     String   @map("business_name")
+  businessType     String   @default("Single Proprietorship") @map("business_type")
+  contactNumber    String   @map("contact_number")
+  pickupAddress    String   @map("pickup_address")
+
+  @@map("stores") // Ipinapantay nito ang pangalan ng model sa 'stores' table sa SQL
+}

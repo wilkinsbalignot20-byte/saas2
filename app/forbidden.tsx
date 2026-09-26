@@ -1,5 +1,4 @@
-// src/app/forbidden.tsx
-'use client';
+ 'use client';
 
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
@@ -17,8 +16,9 @@ export default function Forbidden() {
               Access restricted.
             </span>
 
+            {/* FIX: Ibalot sa curly braces ang text na may ' o apostrophe para 100% safe sa build */}
             <h1 className="font-display text-[32px] font-bold leading-tight tracking-tight text-white md:text-[38px]">
-              You don't have permission to view this page.
+              {"You don't have permission to view this page."}
             </h1>
 
             <p className="max-w-sm text-[13.5px] leading-relaxed text-[#A7B1AB]">

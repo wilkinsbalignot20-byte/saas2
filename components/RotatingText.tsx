@@ -1,14 +1,17 @@
  'use client';
 
-import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState } from 'react';
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useMemo, useState, ComponentPropsWithoutRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-interface RotatingTextProps {
+// Gumawa ng interface para sa Intl.Segmenter dahil wala ito sa lumang TS typings
+interface ExtendedIntl {
+  Segmenter?: new (locale: string, options?: { granularity: 'grapheme' | 'word' | 'sentence' }) => {
+    segment: (text: string) => Iterable<{ segment: string }>;
+  };
+}
+
+interface RotatingTextProps extends ComponentPropsWithoutRef<typeof motion.span> {
   texts: string[];
-  transition?: any;
-  initial?: any;
-  animate?: any;
-  exit?: any;
   animatePresenceMode?: 'wait' | 'popLayout' | 'sync';
   animatePresenceInitial?: boolean;
   rotationInterval?: number;
@@ -21,7 +24,6 @@ interface RotatingTextProps {
   mainClassName?: string;
   splitLevelClassName?: string;
   elementLevelClassName?: string;
-  [key: string]: any;
 }
 
 export interface RotatingTextRef {
@@ -37,7 +39,7 @@ function cn(...classes: (string | undefined | boolean)[]) {
 
 const RotatingText = forwardRef<RotatingTextRef, RotatingTextProps>((props, ref) => {
   const {
-    texts = [], // 🟢 SAFEGUARD: Default sa walang laman na array
+    texts = [],
     transition = { type: 'spring', damping: 25, stiffness: 300 },
     initial = { y: '100%', opacity: 0 },
     animate = { y: 0, opacity: 1 },
@@ -59,10 +61,11 @@ const RotatingText = forwardRef<RotatingTextRef, RotatingTextProps>((props, ref)
 
   const [currentTextIndex, setCurrentTextIndex] = useState(0);
 
-  const splitIntoCharacters = (text: string) => {
-    if (typeof Intl !== 'undefined' && (Intl as any).Segmenter) {
-      const segmenter = new (Intl as any).Segmenter('en', { granularity: 'grapheme' });
-      return Array.from(segmenter.segment(text), (segment: any) => segment.segment);
+  const splitIntoCharacters = (text: string): string[] => {
+    const extendedIntl = Intl as ExtendedIntl;
+    if (typeof Intl !== 'undefined' && extendedIntl.Segmenter) {
+      const segmenter = new extendedIntl.Segmenter('en', { granularity: 'grapheme' });
+      return Array.from(segmenter.segment(text), (segment) => segment.segment);
     }
     return Array.from(text);
   };
@@ -74,28 +77,24 @@ const RotatingText = forwardRef<RotatingTextRef, RotatingTextProps>((props, ref)
 
     if (splitBy === 'characters') {
       const words = currentText.split(' ');
-      // 🟢 FIX: Nilagyan ng `: string` at `: number`
       return words.map((word: string, i: number) => ({
         characters: splitIntoCharacters(word),
         needsSpace: i !== words.length - 1
       }));
     }
     if (splitBy === 'words') {
-      // 🟢 FIX: Nilagyan ng `: string`, `: number`, at `: string[]`
       return currentText.split(' ').map((word: string, i: number, arr: string[]) => ({
         characters: [word],
         needsSpace: i !== arr.length - 1
       }));
     }
     if (splitBy === 'lines') {
-      // 🟢 FIX: Nilagyan ng `: string`, `: number`, at `: string[]`
       return currentText.split('\n').map((line: string, i: number, arr: string[]) => ({
         characters: [line],
         needsSpace: i !== arr.length - 1
       }));
     }
 
-    // 🟢 FIX: Nilagyan ng `: string`, `: number`, at `: string[]`
     return currentText.split(splitBy).map((part: string, i: number, arr: string[]) => ({
       characters: [part],
       needsSpace: i !== arr.length - 1
@@ -177,7 +176,6 @@ const RotatingText = forwardRef<RotatingTextRef, RotatingTextProps>((props, ref)
     return () => clearInterval(intervalId);
   }, [next, rotationInterval, auto, texts.length]);
 
-  // 🟢 SAFEGUARD: Kung walang laman ang text, huwag muna magpakita ng HTML tag
   if (texts.length === 0) return null;
 
   return (

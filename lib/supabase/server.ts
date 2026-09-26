@@ -1,4 +1,4 @@
-  import { createServerClient } from '@supabase/ssr'
+ import { createServerClient, type CookieOptions } from '@supabase/ssr' // Idinagdag ang CookieOptions
 import { cookies } from 'next/headers'
 
 export async function createClient() {
@@ -12,15 +12,15 @@ export async function createClient() {
         getAll() {
           return cookieStore.getAll()
         },
-        // Idinagdag ang explicit type dito para sa cookiesToSet
-        setAll(cookiesToSet: Array<{ name: string; value: string; options: any }>) {
+        
+        setAll(cookiesToSet: Array<{ name: string; value: string; options: CookieOptions }>) {
           try {
             cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
+              // Binalot sa isang solong object para mag-match sa Next.js 16 specs
+              cookieStore.set({ name, value, ...options })
             )
           } catch {
-            // Ang 'setAll' ay pwedeng matawag mula sa isang Server Component.
-            // Pwede itong i-ignore dahil hindi direktang nakakapag-set ng cookie ang Server Components doon.
+            // Ang 'setAll' ay pwedeng matawag mula sa isang Server Component. Safe i-ignore.
           }
         },
       },
