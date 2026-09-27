@@ -1,12 +1,12 @@
- import Link from 'next/link';
+  import Link from 'next/link';
 import { Sparkles } from 'lucide-react';
 import { DriftWall } from "@/components/ui/drift-wall"; // 💡 Dito natin ito i-import mula sa UI folder
 
 // 📸 Ang listahan ng mga larawan ng iyong mga paninda o tindahan sa Manipu Mall
 const SHOP_ITEMS = [
-  { image: 'https://picsum.photos/id/1015/600/400', title: 'Peaks' },
-  { image: 'https://picsum.photos/id/1025/600/400', title: 'Pup' },
-  { image: 'https://picsum.photos/id/1039/600/400', title: 'Falls' },
+  { image: 'https://images.unsplash.com/photo-1525507119028-ed4c629a60a3?q=80&w=1935&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', title: 'Peaks' },
+  { image: 'https://images.unsplash.com/photo-1521499892833-773a6c6fd0b8?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', title: 'Pup' },
+  { image: 'https://images.unsplash.com/photo-1588117260148-b47818741c74?q=80&w=687&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', title: 'Falls' },
 ];
 
 export function ShopHero() {

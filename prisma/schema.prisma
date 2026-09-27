@@ -30,3 +30,42 @@ model Store {
 
   @@map("stores") // Ipinapantay nito ang pangalan ng model sa 'stores' table sa SQL
 }
+
+model SignupCustomer {
+  // Ang ID ay String/UUID na manggagaling mismo sa Supabase Auth User ID pagkatapos ng OTP verification
+  id           String   @id
+  
+  // Account Details (Dito papasok ang Gmail/Email ng Customer)
+  email        String   @unique
+  fullName     String   @map("full_name")
+  
+  // Contact Numbers (Mahalaga para sa mga riders at notifications)
+  phone        String
+  altPhone     String?  @map("alt_phone") // Nullable dahil opsyonal ito sa form mo
+
+  // Structured Delivery Address (Hiwa-hiwalay para sa courier utility at label generation)
+  street       String
+  barangay     String
+  city         String   @map("city_municipality")
+  province     String
+  zipCode      String   @map("zip_code")
+
+  // System Audit Timestamps
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Nilalagyan natin ito ng @@map para ang pangalan ng table sa iyong PostgreSQL/Supabase ay maging malinis na snake_case
+  @@map("signup_customers")
+}
+
+model OtpVerification {
+  id        String   @id @default(uuid())
+  email     String   
+  code      String   // Dito itatabi ang 6-digit number (e.g., "123456")
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("otp_verifications")
+}
+
+
