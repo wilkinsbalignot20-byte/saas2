@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element */
 // app/(dashboard)/dashboard/[slug]/layout.tsx
 import React from 'react';
 import type { Metadata } from 'next';

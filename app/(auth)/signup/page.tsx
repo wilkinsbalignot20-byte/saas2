@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/(auth)/signup/page.tsx
 'use client';
 

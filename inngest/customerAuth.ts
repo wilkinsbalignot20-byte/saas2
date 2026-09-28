@@ -1,4 +1,4 @@
- import { marketplaceInngest } from "./marketplace-client"; 
+  import { marketplaceInngest } from "./marketplace-client"; 
 import { prisma } from "@/lib/prisma"; 
 import nodemailer from "nodemailer"; // ⚡ UPDATED: Pinalitan si Resend ng Nodemailer
 

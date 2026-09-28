@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/(dashboard)/dashboard/[slug]/page.tsx
 'use client';
 
