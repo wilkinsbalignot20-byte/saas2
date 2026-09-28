@@ -1,9 +1,15 @@
  import { marketplaceInngest } from "./marketplace-client"; 
 import { prisma } from "@/lib/prisma"; 
-import { Resend } from "resend"; // 🆕 Idinagdag para sa email automation framework
+import nodemailer from "nodemailer"; // ⚡ UPDATED: Pinalitan si Resend ng Nodemailer
 
-// Isaksak ang Resend instance gamit ang iyong nakatagong API Key sa .env
-const resend = new Resend(process.env.RESEND_API_KEY);
+// ⚡ GUMAWA NG GMAIL SMTP TRANSPORTER GAMIT ANG APP PASSWORD MULA SA .ENV
+const transporter = nodemailer.createTransport({
+  service: "gmail",
+  auth: {
+    user: process.env.EMAIL_USER, // Ang iyong personal na Gmail
+    pass: process.env.EMAIL_PASS, // Ang iyong 16-character App Password nang walang spaces
+  },
+});
 
 interface OtpRequestPayload {
   email: string;
@@ -23,14 +29,14 @@ export const customerOtpWorkflow = marketplaceInngest.createFunction(
       return { success: false, error: "Email is required." };
     }
 
-    // 1. Gumawa ng random 6-digit cryptographic safe text token
+    // 1. Gumawa ng random 6-digit cryptographic safe text token (Walang pagbabago rito)
     const generatedOtp = await step.run("generate-six-digit-code", async () => {
       const randomCode = Math.floor(100000 + Math.random() * 900000).toString();
       console.log(`[OTP ENGINE]: Formulated code for ${email}`);
       return randomCode;
     });
 
-    // 2. I-save ang ginawang OTP sa database gamit ang OtpVerification model natin na valid ng 5 minuto
+    // 2. I-save ang ginawang OTP sa database gamit ang OtpVerification (Walang pagbabago rito)
     await step.run("save-otp-to-database", async () => {
       const expirationTime = new Date(Date.now() + 5 * 60 * 1000);
 
@@ -44,18 +50,17 @@ export const customerOtpWorkflow = marketplaceInngest.createFunction(
       console.log(`[OTP ENGINE]: Securely mapped validation lifecycle in database.`);
     });
 
-    // 3. ⚡ UPDATED: Pinalitan ang local console block ng totoong Resend Dispatch delivery engine
+    // 3. ⚡ UPDATED: Pinalitan ang Resend engine ng totoong Nodemailer Gmail Delivery
     await step.run("dispatch-gmail-payload", async () => {
-      console.log(`[OTP ENGINE]: Dispatching email payload to ${email}. Token logic identifier: [${generatedOtp}]`);
+      console.log(`[OTP ENGINE]: Dispatching email payload to ${email} via Gmail SMTP.`);
       
-      const { data, error } = await resend.emails.send({
-        // Paalala: Habang naka-Free Testing Tier ka sa Resend, onboarding@resend.dev muna ang default static email
-        from: "Manipu Mall <onboarding@resend.dev>", 
-        to: [email.toLowerCase()],
+      const mailOptions = {
+        from: `"Manipu Mall" <${process.env.EMAIL_USER}>`, // Lalabas na galing sa iyong shop gamit ang Gmail mo
+        to: email.toLowerCase(),
         subject: "Your 6-Digit Verification Code - Manipu Mall",
         html: `
           <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 16px; background-color: #ffffff;">
-            <h2 style="font-size: 22px; font-weight: bold; color: #111111; margin-bottom: 6px; tracking-content: tight;">Verify your email</h2>
+            <h2 style="font-size: 22px; font-weight: bold; color: #111111; margin-bottom: 6px; letter-spacing: -0.5px;">Verify your email</h2>
             <p style="font-size: 14px; color: #4b5563; line-height: 1.5; margin-bottom: 20px;">Use the secure 6-digit validation code below to complete your customer account setup or login entry.</p>
             
             <div style="font-size: 36px; font-weight: bold; font-family: monospace; letter-spacing: 8px; text-align: center; padding: 18px; background-color: #f3f4f6; border-radius: 12px; margin: 24px 0; color: #000000;">
@@ -67,15 +72,13 @@ export const customerOtpWorkflow = marketplaceInngest.createFunction(
             </p>
           </div>
         `
-      });
+      };
 
-      // Kung sumabog si Resend, itatala ng Inngest dashboard ang kumpletong crash data block
-      if (error) {
-        console.error("[OTP ENGINE] Core Resend Client Failure:", error);
-        throw new Error(error.message);
-      }
-
-      return { dispatched: true, emailId: data?.id };
+      // I-send ang email gamit ang binuong transporter
+      const info = await transporter.sendMail(mailOptions);
+      
+      console.log(`[OTP ENGINE] Email successfully dispatched via Gmail. MessageId: ${info.messageId}`);
+      return { dispatched: true, messageId: info.messageId };
     });
 
     return { success: true, target: email };

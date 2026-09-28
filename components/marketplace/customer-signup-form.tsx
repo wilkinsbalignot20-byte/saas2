@@ -3,43 +3,89 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
 
+// ==========================================
+// 1. SECURE 6-DIGIT CODE VERIFICATION VIEW
+// ==========================================
+interface OtpStepProps {
+  email: string;
+  otpCode: string;
+  setOtpCode: (val: string) => void;
+  loading: boolean;
+  onVerify: (e: React.FormEvent) => void;
+  onBack: () => void;
+}
+
+function OtpVerificationStep({ email, otpCode, setOtpCode, loading, onVerify, onBack }: OtpStepProps) {
+  return (
+    <form className="space-y-5" onSubmit={onVerify}>
+      <div className="space-y-2 text-center">
+        <p className="text-sm text-ink/70">
+          We sent a 6-digit verification code to <span className="font-semibold text-ink">{email}</span>.
+        </p>
+        <p className="text-xs text-ink/40">Please check your inbox or spam folder.</p>
+      </div>
+
+      <input
+        type="text"
+        required
+        maxLength={6}
+        placeholder="000000"
+        value={otpCode}
+        onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
+        className="w-full bg-paper border border-ink/15 rounded-xl px-4 py-4 text-center text-xl font-mono tracking-widest focus:outline-none focus:border-marigold transition-colors"
+      />
+
+      <button
+        type="submit"
+        disabled={loading || otpCode.length !== 6}
+        className="w-full py-3 px-4 text-sm font-semibold rounded-xl text-paper bg-ink hover:bg-ink/90 disabled:opacity-40 transition-colors"
+      >
+        {loading ? 'Verifying code…' : 'Confirm & Complete Registration'}
+      </button>
+
+      <button
+        type="button"
+        onClick={onBack}
+        className="w-full text-center text-xs font-semibold text-ink/60 hover:text-ink transition-colors"
+      >
+        ← Go back and change details
+      </button>
+    </form>
+  );
+}
+
+// ==========================================
+// 2. MAIN REGISTRATION FORM VIEW
+// ==========================================
 export function CustomerSignupForm() {
   const router = useRouter();
-  const supabase = createClient();
 
-  // Step Tracker (1: Enter Profile & Trigger OTP, 2: Verify OTP Token)
+  // Track screens: 1 = Registration form, 2 = Code entry screen
   const [step, setStep] = useState<1 | 2>(1);
 
-  // Account & Contact Data
+  // Form Fields State
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [altPhone, setAltPhone] = useState('');
-
-  // Structured delivery address
   const [street, setStreet] = useState('');
   const [barangay, setBarangay] = useState('');
   const [city, setCity] = useState('');
   const [province, setProvince] = useState('');
   const [zipCode, setZipCode] = useState('');
-
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  
-  // OTP Token input state
   const [otpCode, setOtpCode] = useState('');
 
-  // UI state managers
+  // Status Trackers
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
-  // Form Validation Rule (No password fields needed!)
   const isFormValid =
     fullName && email && phone && street && barangay && city && province && zipCode && agreedToTerms;
 
-  // STEP 1: Request OTP and Send to Gmail
+  // STEP 1: Mag-request ng OTP sa Inngest sa pamamagitan ng Auth API endpoint
   const handleSendOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -52,64 +98,47 @@ export function CustomerSignupForm() {
     setLoading(true);
 
     try {
-      // Trigger Supabase Passwordless OTP via Email
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          shouldCreateUser: true, // Auto-creates account if email doesn't exist yet
-          data: { full_name: fullName, role: 'customer' },
-        },
+      const response = await fetch('/api/auth/request-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
       });
 
-      if (otpError) throw otpError;
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'Failed to trigger verification process.');
 
-      // Move to the verification input field step
       setStep(2);
     } catch (err: any) {
-      setError(err.message || 'Something went wrong while sending the verification code.');
+      setError(err.message || 'Something went wrong while dispatching your token.');
     } finally {
       setLoading(false);
     }
   };
 
-  // STEP 2: Verify OTP and Insert Profile Data to Database
+  // STEP 2: Suriin ang code sa database at irehistro ang customer profile details
   const handleVerifyOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
-      // Verify the 6-digit code submitted by the user
-      const { data: authData, error: verifyError } = await supabase.auth.verifyOtp({
-        email,
-        token: otpCode,
-        type: 'signup', // Use 'signup' or 'magiclink' depending on your Supabase dashboard configuration
+      const response = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          code: otpCode,
+          profile: { fullName, phone, altPhone, street, barangay, city, province, zipCode }
+        }),
       });
 
-      if (verifyError) throw verifyError;
-
-      // Once confirmed, safe-insert customer records into database table
-      if (authData.user) {
-        const { error: profileError } = await supabase.from('customers').insert([
-          {
-            id: authData.user.id,
-            full_name: fullName,
-            phone,
-            alt_phone: altPhone || null,
-            street,
-            barangay,
-            city,
-            province,
-            zip_code: zipCode,
-          },
-        ]);
-        if (profileError) throw profileError;
-      }
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || 'The code is invalid or has expired.');
 
       setSuccess(true);
-      setTimeout(() => router.push('/shop'), 1500); // Redirect directly to marketplace home since they are already logged in
+      setTimeout(() => router.push('/shop'), 1500);
     } catch (err: any) {
-      setError(err.message || 'Invalid or expired verification code.');
+      setError(err.message || 'Invalid validation entry.');
     } finally {
       setLoading(false);
     }
@@ -124,173 +153,59 @@ export function CustomerSignupForm() {
         </div>
       )}
 
-      {/* RENDER STEP 1: PROFILE FORM */}
+      {/* DISPLAY FORM FIELDS */}
       {step === 1 && (
         <form className="space-y-5" onSubmit={handleSendOTP}>
-          {/* ACCOUNT */}
           <div className="space-y-3">
             <h3 className="text-xs font-semibold text-marigold-dark uppercase tracking-wide">Account</h3>
-            <input
-              type="text"
-              required
-              placeholder="Full name"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              className="w-full bg-paper border border-ink/15 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-marigold transition-colors"
-            />
-            <input
-              type="email"
-              required
-              placeholder="Email address"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-paper border border-ink/15 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-marigold transition-colors"
-            />
+            <input type="text" required placeholder="Full name" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full bg-paper border border-ink/15 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-marigold transition-colors" />
+            <input type="email" required placeholder="Email address" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-paper border border-ink/15 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-marigold transition-colors" />
           </div>
 
-          {/* CONTACT */}
           <div className="space-y-3">
             <h3 className="text-xs font-semibold text-marigold-dark uppercase tracking-wide">Contact number</h3>
             <div className="grid grid-cols-2 gap-3">
-              <input
-                type="tel"
-                required
-                placeholder="Mobile number"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                className="w-full bg-paper border border-ink/15 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-marigold transition-colors"
-              />
-              <input
-                type="tel"
-                placeholder="Alternate number (optional)"
-                value={altPhone}
-                onChange={(e) => setAltPhone(e.target.value)}
-                className="w-full bg-paper border border-ink/15 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-marigold transition-colors"
-              />
+              <input type="tel" required placeholder="Mobile number" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full bg-paper border border-ink/15 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-marigold transition-colors" />
+              <input type="tel" placeholder="Alternate number (optional)" value={altPhone} onChange={(e) => setAltPhone(e.target.value)} className="w-full bg-paper border border-ink/15 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-marigold transition-colors" />
             </div>
-            <p className="text-xs text-ink/40">The alternate number helps riders reach you if you miss a call.</p>
           </div>
 
-          {/* DELIVERY ADDRESS */}
           <div className="space-y-3">
             <h3 className="text-xs font-semibold text-marigold-dark uppercase tracking-wide">Delivery address</h3>
-            <input
-              type="text"
-              required
-              placeholder="House no. / Street"
-              value={street}
-              onChange={(e) => setStreet(e.target.value)}
-              className="w-full bg-paper border border-ink/15 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-marigold transition-colors"
-            />
+            <input type="text" required placeholder="House no. / Street" value={street} onChange={(e) => setStreet(e.target.value)} className="w-full bg-paper border border-ink/15 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-marigold transition-colors" />
             <div className="grid grid-cols-2 gap-3">
-              <input
-                type="text"
-                required
-                placeholder="Barangay"
-                value={barangay}
-                onChange={(e) => setBarangay(e.target.value)}
-                className="w-full bg-paper border border-ink/15 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-marigold transition-colors"
-              />
-              <input
-                type="text"
-                required
-                placeholder="City / Municipality"
-                value={city}
-                onChange={(e) => setCity(e.target.value)}
-                className="w-full bg-paper border border-ink/15 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-marigold transition-colors"
-              />
+              <input type="text" required placeholder="Barangay" value={barangay} onChange={(e) => setBarangay(e.target.value)} className="w-full bg-paper border border-ink/15 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-marigold transition-colors" />
+              <input type="text" required placeholder="City / Municipality" value={city} onChange={(e) => setCity(e.target.value)} className="w-full bg-paper border border-ink/15 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-marigold transition-colors" />
             </div>
             <div className="grid grid-cols-2 gap-3">
-              <input
-                type="text"
-                required
-                placeholder="Province"
-                value={province}
-                onChange={(e) => setProvince(e.target.value)}
-                className="w-full bg-paper border border-ink/15 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-marigold transition-colors"
-              />
-              <input
-                type="text"
-                required
-                placeholder="ZIP code"
-                value={zipCode}
-                onChange={(e) => setZipCode(e.target.value.replace(/[^0-9]/g, ''))}
-                className="w-full bg-paper border border-ink/15 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-marigold transition-colors"
-              />
+              <input type="text" required placeholder="Province" value={province} onChange={(e) => setProvince(e.target.value)} className="w-full bg-paper border border-ink/15 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-marigold transition-colors" />
+              <input type="text" required placeholder="ZIP code" value={zipCode} onChange={(e) => setZipCode(e.target.value.replace(/[^0-9]/g, ''))} className="w-full bg-paper border border-ink/15 rounded-xl px-4 py-3 text-sm font-mono focus:outline-none focus:border-marigold transition-colors" />
             </div>
           </div>
 
-          {/* TERMS */}
           <div className="flex items-start gap-3 border-t border-ink/10 pt-4">
-            <input
-              type="checkbox"
-              id="customer-terms"
-              checked={agreedToTerms}
-              onChange={(e) => setAgreedToTerms(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded border-ink/15 text-ink focus:ring-marigold"
-            />
+            <input type="checkbox" id="customer-terms" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} className="mt-0.5 h-4 w-4 rounded border-ink/15 text-ink focus:ring-marigold" />
             <label htmlFor="customer-terms" className="text-xs text-ink/60 leading-relaxed select-none">
-              I agree to Manipu&apos;s{' '}
-              <Link href="/terms" className="font-semibold text-ink underline hover:text-marigold-dark">Terms</Link>{' '}
-              and{' '}
-              <Link href="/privacy" className="font-semibold text-ink underline hover:text-marigold-dark">Privacy Policy</Link>.
+              I agree to Manipu&apos;s <Link href="/terms" className="font-semibold text-ink underline hover:text-marigold-dark">Terms</Link> and <Link href="/privacy" className="font-semibold text-ink underline hover:text-marigold-dark">Privacy Policy</Link>.
             </label>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading || !isFormValid}
-            className="w-full py-3 px-4 text-sm font-semibold rounded-xl text-paper bg-ink hover:bg-ink/90 disabled:opacity-40 transition-colors"
-          >
+          <button type="submit" disabled={loading || !isFormValid} className="w-full py-3 px-4 text-sm font-semibold rounded-xl text-paper bg-ink hover:bg-ink/90 disabled:opacity-40 transition-colors">
             {loading ? 'Sending code to email…' : 'Verify via Email OTP'}
           </button>
-
-          <p className="text-center text-xs text-ink/50">
-            Already have an account?{' '}
-            <Link href="/shop/account/login" className="font-semibold text-ink hover:text-marigold-dark transition-colors">
-              Log in here
-            </Link>
-          </p>
         </form>
       )}
 
-      {/* RENDER STEP 2: VERIFY CODE INPUT */}
-      {/* RENDER STEP 2: VERIFY CODE INPUT */}
+      {/* DISPLAY OTP VERIFICATION MODULE */}
       {step === 2 && (
-        <form className="space-y-5" onSubmit={handleVerifyOTP}>
-          <div className="space-y-2 text-center">
-            <p className="text-sm text-ink/70">
-              We sent a 6-digit verification code to <span className="font-semibold text-ink">{email}</span>.
-            </p>
-            <p className="text-xs text-ink/40">Please check your inbox or spam folder.</p>
-          </div>
-
-          <input
-            type="text"
-            required
-            maxLength={6}
-            placeholder="000000"
-            value={otpCode}
-            onChange={(e) => setOtpCode(e.target.value.replace(/[^0-9]/g, ''))}
-            className="w-full bg-paper border border-ink/15 rounded-xl px-4 py-4 text-center text-xl font-mono tracking-widest focus:outline-none focus:border-marigold transition-colors"
-          />
-
-          <button
-            type="submit"
-            disabled={loading || otpCode.length !== 6}
-            className="w-full py-3 px-4 text-sm font-semibold rounded-xl text-paper bg-ink hover:bg-ink/90 disabled:opacity-40 transition-colors"
-          >
-            {loading ? 'Verifying code…' : 'Confirm & Complete Registration'}
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setStep(1)}
-            className="w-full text-center text-xs font-semibold text-ink/60 hover:text-ink transition-colors"
-          >
-            ← Go back and change details
-          </button>
-        </form>
+        <OtpVerificationStep
+          email={email}
+          otpCode={otpCode}
+          setOtpCode={setOtpCode}
+          loading={loading}
+          onVerify={handleVerifyOTP}
+          onBack={() => setStep(1)}
+        />
       )}
     </>
   );
