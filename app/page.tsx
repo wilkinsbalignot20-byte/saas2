@@ -3,6 +3,8 @@ import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import Hero from '@/components/Hero';
 import FAQSection from '@/components/FAQSection';
+// 🆕 INIMPORT ANG IYONG AI WIDGET COMPONENT
+import ChatWidget from '@/components/marketplace/chat-widget'; 
 
 export default function SaasLandingPage() {
   return (
@@ -127,6 +129,9 @@ export default function SaasLandingPage() {
           </div>
         </div>
       </footer>
+
+      {/* 🆕 9. ANG FLOATING AI NODE - LULUTANG ITO SA KANANG IBABA NG SCREEN */}
+      <ChatWidget />
     </div>
   );
 }

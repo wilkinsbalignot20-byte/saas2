@@ -1,10 +1,13 @@
- generator client {
-  provider = "prisma-client-js"
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"] // ⚡ Idagdag ito para suportahan ang pgvector
 }
 
 datasource db {
-  provider = "postgresql"
+  provider   = "postgresql"
+  extensions = [pgvector]
 }
+
 
 model Store {
   id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
@@ -67,5 +70,39 @@ model OtpVerification {
 
   @@map("otp_verifications")
 }
+model StoreKnowledge {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  storeId   String   @map("store_id") @db.Uuid
+  content   String   // Ang mismong purong teksto (hal. "Ang Store X ay nagbebenta ng sapatos mula 9 AM hanggang 6 PM")
+  
+  embedding Unsupported("vector(3072)")? 
+
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("store_knowledge")
+}
+
+model ChatSession {
+  id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customerId String?       @map("customer_id") // Nullable kung hindi naka-login ang nagcha-chat
+  storeId    String?       @map("store_id") @db.Uuid // Kung nakatutok ang chat sa isang partikular na tindahan
+  createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  messages   ChatMessage[]
+
+  @@map("chat_sessions")
+}
+
+model ChatMessage {
+  id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sessionId String      @map("session_id") @db.Uuid
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  role      String      // "user" o "assistant"
+  content   String      // Ang mensahe
+  createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz
+
+  @@map("chat_messages")
+}
+
 
 
