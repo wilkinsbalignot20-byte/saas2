@@ -1,6 +1,8 @@
+ // prisma/schema.prisma
+
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["postgresqlExtensions"] // ⚡ Idagdag ito para suportahan ang pgvector
+  previewFeatures = ["postgresqlExtensions"] // Naaayon sa iyong pgvector setup
 }
 
 datasource db {
@@ -8,12 +10,11 @@ datasource db {
   extensions = [pgvector]
 }
 
-
 model Store {
   id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  // STEP 3: STORE CONFIGURATION & DESIGN
+  // STORE CONFIGURATION & DESIGN
   name             String
   slug             String   @unique
   themeColor       String   @default("#E8A33D") @map("theme_color")
@@ -21,62 +22,111 @@ model Store {
   backgroundPreset String   @default("bg-slate-50") @map("background_preset")
   status           String   @default("active")
 
-  // STEP 1 & AUTH CONNECTIONS
+  // AUTH CONNECTIONS
   ownerId          String   @map("owner_id") @db.Uuid
   ownerName        String   @map("owner_name")
 
-  // STEP 2: BUSINESS IDENTITY & COURIER
+  // BUSINESS IDENTITY & COURIER
   businessName     String   @map("business_name")
   businessType     String   @default("Single Proprietorship") @map("business_type")
   contactNumber    String   @map("contact_number")
   pickupAddress    String   @map("pickup_address")
 
-  @@map("stores") // Ipinapantay nito ang pangalan ng model sa 'stores' table sa SQL
+  // MULTI-TENANT BACK-END RELATIONS
+  categories       Category[]
+  products         Product[]
+  chatSessions     ChatSession[]
+  storeKnowledge   StoreKnowledge[]
+
+  @@map("stores")
+}
+
+model Category {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  slug      String   // Para sa marketplace routing at filtering
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // RELATIONS
+  storeId   String   @map("store_id") @db.Uuid
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  products  Product[]
+
+  @@unique([storeId, slug]) // Hindi pwedeng magka-pareho ng slug ang dalawang kategorya sa iisang tindahan
+  @@map("categories")
+}
+
+model Product {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  description String?  @db.Text
+  images      String[] // Array ng Cloudinary URLs para sa maramihang larawan
+  status      String   @default("draft") // "draft" o "published"
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // RELATIONS
+  storeId     String   @map("store_id") @db.Uuid
+  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  
+  categoryId  String   @map("category_id") @db.Uuid
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  variants    ProductVariant[] // Dito nakakabit ang iyong inventory at SKU layer
+
+  @@map("products")
+}
+
+model ProductVariant {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   // Halimbawa: "Red / Size 9" o "Standard"
+  sku       String   @unique // Natatanging business identifier para sa imbentaryo
+  price     Decimal  @default(0.00) @db.Decimal(10, 2) // Swak sa e-commerce para walang rounding errors ang pera
+  stock     Int      @default(0) // Ang iyong core inventory tracking count
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // RELATIONS
+  productId String   @map("product_id") @db.Uuid
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@map("product_variants")
 }
 
 model SignupCustomer {
-  // Ang ID ay String/UUID na manggagaling mismo sa Supabase Auth User ID pagkatapos ng OTP verification
   id           String   @id
-  
-  // Account Details (Dito papasok ang Gmail/Email ng Customer)
   email        String   @unique
   fullName     String   @map("full_name")
-  
-  // Contact Numbers (Mahalaga para sa mga riders at notifications)
   phone        String
-  altPhone     String?  @map("alt_phone") // Nullable dahil opsyonal ito sa form mo
-
-  // Structured Delivery Address (Hiwa-hiwalay para sa courier utility at label generation)
+  altPhone     String?  @map("alt_phone")
   street       String
   barangay     String
   city         String   @map("city_municipality")
   province     String
   zipCode      String   @map("zip_code")
-
-  // System Audit Timestamps
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  // Nilalagyan natin ito ng @@map para ang pangalan ng table sa iyong PostgreSQL/Supabase ay maging malinis na snake_case
   @@map("signup_customers")
 }
 
 model OtpVerification {
   id        String   @id @default(uuid())
   email     String   
-  code      String   // Dito itatabi ang 6-digit number (e.g., "123456")
+  code      String   
   expiresAt DateTime @map("expires_at")
   createdAt DateTime @default(now()) @map("created_at")
 
   @@map("otp_verifications")
 }
+
 model StoreKnowledge {
   id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   storeId   String   @map("store_id") @db.Uuid
-  content   String   // Ang mismong purong teksto (hal. "Ang Store X ay nagbebenta ng sapatos mula 9 AM hanggang 6 PM")
-  
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  content   String   
   embedding Unsupported("vector(3072)")? 
-
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
@@ -85,8 +135,9 @@ model StoreKnowledge {
 
 model ChatSession {
   id         String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  customerId String?       @map("customer_id") // Nullable kung hindi naka-login ang nagcha-chat
-  storeId    String?       @map("store_id") @db.Uuid // Kung nakatutok ang chat sa isang partikular na tindahan
+  customerId String?       @map("customer_id") 
+  storeId    String?       @map("store_id") @db.Uuid 
+  store      Store?        @relation(fields: [storeId], references: [id], onDelete: Cascade)
   createdAt  DateTime      @default(now()) @map("created_at") @db.Timestamptz
   messages   ChatMessage[]
 
@@ -97,12 +148,9 @@ model ChatMessage {
   id        String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   sessionId String      @map("session_id") @db.Uuid
   session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  role      String      // "user" o "assistant"
-  content   String      // Ang mensahe
+  role      String      
+  content   String      
   createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz
 
   @@map("chat_messages")
 }
-
-
-

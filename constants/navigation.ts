@@ -18,7 +18,7 @@ export const getSellerNavigation = (seller: string): NavGroup[] => [
   {
     label: 'Catalog & orders',
     items: [
-      { href: `/dashboard/${seller}/product`, label: 'Products', icon: 'package' },
+      { href: `/dashboard/${seller}/products`, label: 'Products', icon: 'package' },
       { href: `/dashboard/${seller}/order`, label: 'Orders & shipping', icon: 'receipt' },
       { href: `/dashboard/${seller}/order/logistics`, label: 'Logistics control', icon: 'truck' },
     ],
