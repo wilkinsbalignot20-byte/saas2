@@ -87,7 +87,7 @@ export default function SellerMainDashboard() {
         </div>
 
         <Link
-          href={`/store/${slug}`}
+          href={`/shop/${slug}`}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-2 border border-[#1B211D]/15 text-[#1B211D] font-medium px-4 py-2.5 rounded-xl text-sm hover:bg-[#1B211D]/5 active:scale-[0.98] transition-all select-none"

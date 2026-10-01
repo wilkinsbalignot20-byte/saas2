@@ -1,8 +1,9 @@
-// constants/navigation.ts
+ // constants/navigation.ts
 export type NavItem = {
   href: string;
   label: string;
-  icon: 'dashboard' | 'package' | 'receipt' | 'truck' | 'wallet' | 'tag' | 'chart' | 'chat' | 'cpu' | 'file';
+  // 1. IDINAGDAG ANG 'palette' SA MGA PINAPAYAGANG ICON TYPES MO
+  icon: 'dashboard' | 'package' | 'palette' | 'receipt' | 'truck' | 'wallet' | 'tag' | 'chart' | 'chat' | 'cpu' | 'file';
 };
 
 export type NavGroup = {
@@ -19,6 +20,8 @@ export const getSellerNavigation = (seller: string): NavGroup[] => [
     label: 'Catalog & orders',
     items: [
       { href: `/dashboard/${seller}/products`, label: 'Products', icon: 'package' },
+      // 2. DITO NATIN OPISYAL NA IKIKABIT ANG BAGONG STOREFRONT DESIGN NAV LINK:
+      { href: `/dashboard/${seller}/storefront`, label: 'Storefront Design', icon: 'palette' },
       { href: `/dashboard/${seller}/order`, label: 'Orders & shipping', icon: 'receipt' },
       { href: `/dashboard/${seller}/order/logistics`, label: 'Logistics control', icon: 'truck' },
     ],

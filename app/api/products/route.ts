@@ -26,14 +26,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Tenant storefront profile not found.' }, { status: 404 });
     }
 
-    // 3. SMART CATEGORY RESOLUTION (Dito natin aayusin ang problema mo)
+    // 3. SMART CATEGORY RESOLUTION
     let finalCategoryId = categoryId;
 
-    // Kung walang napiling kategorya sa dropdown pero may tinype sa input box:
     if (!finalCategoryId && newCategoryName) {
       const generatedSlug = newCategoryName.toLowerCase().trim().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
 
-      // I-check muna kung umiiral na ang kategoryang ito para sa store na ito para maiwasan ang duplicate
+      // Isolation check sa kategorya para sa store na ito
       const existingCategory = await prisma.category.findFirst({
         where: {
           storeId: store.id,
@@ -44,7 +43,6 @@ export async function POST(request: Request) {
       if (existingCategory) {
         finalCategoryId = existingCategory.id;
       } else {
-        // Kung talagang bago, awtomatikong gawin ang kategorya sa database real-time
         const createdCategory = await prisma.category.create({
           data: {
             name: newCategoryName,
@@ -56,7 +54,6 @@ export async function POST(request: Request) {
       }
     }
 
-    // Kung parehong walang dropdown selection at walang tinype na kategorya:
     if (!finalCategoryId) {
       return NextResponse.json(
         { error: 'Please specify a category by typing a new one or selecting from the list.' },
@@ -64,7 +61,29 @@ export async function POST(request: Request) {
       );
     }
 
-    // 4. DATABASE TRANSACTION LAYER: SAVE PRODUCT & INVENTORY
+    // 4. MULTI-TENANT SKU ENFORCEMENT & INTEGRITY GUARD
+    // Sinisiguro natin na ang bawat SKU ay may kasamang identifier ng store slug sa unahan
+    // para hindi magka-clash ang magkaibang merchants na may parehong product structure.
+    const cleanStorePrefix = slug.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 4);
+    
+    const isolatedVariants = variants.map((v: any) => {
+      const rawSku = v.sku.trim().toUpperCase();
+      
+      // Kung ang merchant ay manu-manong nag-type ng SKU at hindi nito sinimulan sa store slug prefix,
+      // awtomatiko nating ididikit ito sa unahan para sa database isolation layer.
+      const securedSku = rawSku.startsWith(cleanStorePrefix) 
+        ? rawSku 
+        : `${cleanStorePrefix}-${rawSku}`;
+
+      return {
+        name: v.name,
+        sku: securedSku,
+        price: v.price,
+        stock: v.stock,
+      };
+    });
+
+    // 5. DATABASE TRANSACTION LAYER: SAVE PRODUCT & INVENTORY
     const newProduct = await prisma.product.create({
       data: {
         name,
@@ -72,14 +91,9 @@ export async function POST(request: Request) {
         images: images || [],
         status,
         storeId: store.id,
-        categoryId: finalCategoryId, // Gamitin ang nalikha o nahanap na Category ID
+        categoryId: finalCategoryId,
         variants: {
-          create: variants.map((v: any) => ({
-            name: v.name,
-            sku: v.sku,
-            price: v.price,
-            stock: v.stock,
-          })),
+          create: isolatedVariants, // Gamitin ang isolated variants na may protektadong SKU
         },
       },
       include: {
@@ -93,7 +107,7 @@ export async function POST(request: Request) {
     console.error('BACK-END SAVE REJECTION ERROR:', error);
     if (error.code === 'P2002') {
       return NextResponse.json(
-        { error: 'The SKU barcode you provided already exists in the system database inventory.' },
+        { error: 'The SKU barcode already exists or is being used by another shop on the platform.' },
         { status: 400 }
       );
     }

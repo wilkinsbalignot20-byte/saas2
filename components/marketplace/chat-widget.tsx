@@ -1,7 +1,7 @@
  'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { ClipboardList, RotateCcw, X, MessageSquare, Send, Bot, ShieldCheck } from 'lucide-react';
+import { X, MessageSquare, Send, Bot, ShieldCheck } from 'lucide-react';
 
 export default function ChatWidget({ storeId }: { storeId?: string }) {
   const [isOpen, setIsOpen] = useState(false);
