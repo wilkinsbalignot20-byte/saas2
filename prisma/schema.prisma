@@ -38,6 +38,8 @@ model Store {
   chatSessions     ChatSession[]
   storeKnowledge   StoreKnowledge[]
 
+  orders           Order[]
+
   @@map("stores")
 }
 
@@ -90,6 +92,8 @@ model ProductVariant {
   // RELATIONS
   productId String   @map("product_id") @db.Uuid
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  orderItems OrderItem[] 
 
   @@map("product_variants")
 }
@@ -153,4 +157,43 @@ model ChatMessage {
   createdAt DateTime    @default(now()) @map("created_at") @db.Timestamptz
 
   @@map("chat_messages")
+}
+
+model Order {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  orderNumber     String   @unique @map("order_number")
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  subtotal        Decimal  @db.Decimal(10, 2)
+  shippingFee     Decimal  @default(0.00) @map("shipping_fee") @db.Decimal(10, 2)
+  discount        Decimal  @default(0.00) @db.Decimal(10, 2)
+  totalAmount     Decimal  @map("total_amount") @db.Decimal(10, 2)
+  paymentStatus   String   @default("pending") @map("payment_status")
+  shippingStatus  String   @default("unfulfilled") @map("shipping_status")
+  customerName    String   @map("customer_name")
+  customerEmail   String   @map("customer_email")
+  customerPhone   String   @map("customer_phone")
+  shippingAddress String   @map("shipping_address") @db.Text
+  notes           String?  @db.Text
+  storeId         String   @map("store_id") @db.Uuid
+  store           Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  orderItems      OrderItem[]
+
+  @@index([storeId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  quantity        Int      @default(1)
+  priceAtPurchase Decimal  @map("price_at_purchase") @db.Decimal(10, 2)
+  productName     String   @map("product_name")
+  variantName     String   @map("variant_name")
+  variantSku      String   @map("variant_sku")
+  orderId         String   @map("order_id") @db.Uuid
+  order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  variantId       String?  @map("variant_id") @db.Uuid
+  variant         ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  @@map("order_items")
 }

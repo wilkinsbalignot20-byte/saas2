@@ -22,8 +22,8 @@ export const getSellerNavigation = (seller: string): NavGroup[] => [
       { href: `/dashboard/${seller}/products`, label: 'Products', icon: 'package' },
       // 2. DITO NATIN OPISYAL NA IKIKABIT ANG BAGONG STOREFRONT DESIGN NAV LINK:
       { href: `/dashboard/${seller}/storefront`, label: 'Storefront Design', icon: 'palette' },
-      { href: `/dashboard/${seller}/order`, label: 'Orders & shipping', icon: 'receipt' },
-      { href: `/dashboard/${seller}/order/logistics`, label: 'Logistics control', icon: 'truck' },
+      { href: `/dashboard/${seller}/orders`, label: 'Orders & shipping', icon: 'receipt' },
+      { href: `/dashboard/${seller}/orders/logistics`, label: 'Logistics control', icon: 'truck' },
     ],
   },
   {
