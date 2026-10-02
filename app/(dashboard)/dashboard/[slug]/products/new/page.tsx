@@ -1,6 +1,7 @@
-// app/(dashboard)/dashboard/[slug]/products/new/page.tsx
+ // app/(dashboard)/dashboard/[slug]/products/new/page.tsx
 
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
 import ProductForm from '@/components/dashboard/ProductForm';
@@ -9,27 +10,20 @@ interface NewProductPageProps {
   params: Promise<{ slug: string }>;
 }
 
-// SINISIGURONG MAY "export default" AT ARQUITECTURANG ASYNC SERVER
 export default async function NewProductPage({ params }: NewProductPageProps) {
-  // 1. Kunin ang active store slug mula sa URL parameters
   const { slug } = await params;
 
-  // 2. BACK-END LOGIC: Hatakin ang mga kategorya ng tindahang ito mula sa database
-  // Ito ay para may mapiling kategorya ang merchant sa dropdown select ng form mamaya
-  const categories = await prisma.category.findMany({
-    where: {
-      store: {
-        slug: slug,
-      },
-    },
-    select: {
-      id: true,
-      name: true,
-    },
-    orderBy: {
-      name: 'asc',
-    },
-  });
+  // Store name (para sa live preview) at mga kategorya ng tindahan
+  const [store, categories] = await Promise.all([
+    prisma.store.findUnique({ where: { slug }, select: { name: true } }),
+    prisma.category.findMany({
+      where: { store: { slug } },
+      select: { id: true, name: true },
+      orderBy: { name: 'asc' },
+    }),
+  ]);
+
+  if (!store) return notFound();
 
   return (
     <main className="flex-1 p-6 md:p-10 space-y-8 bg-[#F6F5F1] text-[#1B211D] min-h-screen overflow-y-auto">
@@ -53,9 +47,7 @@ export default async function NewProductPage({ params }: NewProductPageProps) {
         </div>
       </div>
 
-      {/* RENDER NG FORM COMPONENT (Ipapasa ang categories at active slug) */}
-      {/* Tandaan: Mag-e-error pansamantala ang Next.js dito hangga't wala pa ang ProductForm file */}
-      <ProductForm categories={categories} slug={slug} />
+      <ProductForm categories={categories} slug={slug} storeName={store.name} />
     </main>
   );
 }
