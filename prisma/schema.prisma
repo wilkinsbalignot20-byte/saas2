@@ -40,6 +40,10 @@ model Store {
 
   orders           Order[]
   couriers         Courier[]
+    // SA LOOB NG MODEL STORE:
+  vouchers         Voucher[]
+  campaigns        Campaign[]
+
 
   @@map("stores")
 }
@@ -216,3 +220,67 @@ model Courier {
 
   @@map("couriers")
 }
+// ==========================================
+// 🆕 MARKETING SECTOR MODES & PLACEMENTS
+// ==========================================
+
+model Voucher {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code          String   // Halimbawa: LESS200, PASKO10
+  discountType  String   // "FIXED" (gaya ng Less 200) o "PERCENTAGE" (gaya ng 10% off)
+  discountValue Decimal  @map("discount_value") @db.Decimal(10, 2)
+  minSpend      Decimal  @default(0.00) @map("min_spend") @db.Decimal(10, 2)
+  maxClaims     Int?     @map("max_claims") // Kung may limitasyon ba ang pwedeng gumamit (e.g., Unang 50 na tao)
+  claimedCount  Int      @default(0) @map("claimed_count")
+  isActive      Boolean  @default(true) @map("is_active")
+  expiresAt     DateTime? @map("expires_at") @db.Timestamptz
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // TENANT ISOLATION
+  storeId       String   @map("store_id") @db.Uuid
+  store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  // Composite Key Guard: Para pwedeng gamitin ng magkaibang store ang code na "WELCOME10" nang hindi nagbabanggaan
+  @@unique([storeId, code])
+  @@map("vouchers")
+}
+
+model Campaign {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   // Halimbawa: "3-Day Sale", "Midnight Flash Sale"
+  type        String   // "FLASH_SALE", "THREE_DAY_SALE", "BUY_1_TAKE_1", "BUNDLE"
+  status      String   @default("UPCOMING") // UPCOMING, ACTIVE, EXPIRED (Inngest Controlled)
+  startDate   DateTime @map("start_date") @db.Timestamptz
+  endDate     DateTime @map("end_date") @db.Timestamptz
+  
+  // PREMIUM BOOSTING MATRIX (Maas Setup)
+  isPremiumBoosted  Boolean  @default(false) @map("is_premium_boosted") // Kung nagbayad ang tenant para i-display sa explore
+  boostedSlotType   String?  @map("boosted_slot_type") // "HERO_CAROUSEL", "HOT_DEALS_GRID"
+  
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // TENANT ISOLATION
+  storeId     String   @map("store_id") @db.Uuid
+  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  // RELATIONS
+  rules       CampaignRule[]
+
+  @@map("campaigns")
+}
+
+model CampaignRule {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  campaignId      String   @map("campaign_id") @db.Uuid
+  campaign        Campaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  
+  // Rule Configuration (Flexibility para sa Bundles o BOGO)
+  productId       String?  @map("product_id") @db.Uuid // Kung sa specific product lang ang flash sale/bundle
+  variantId       String?  @map("variant_id") @db.Uuid // Kung sa specific variant/SKU lang
+  promoPrice      Decimal? @map("promo_price") @db.Decimal(10, 2) // Bagong presyo kapag flash sale
+  requiredQuantity Int     @default(1) @map("required_quantity") // Para sa BOGO (e.g., Buy 2 items)
+  freeQuantity     Int     @default(0) @map("free_quantity") // Para sa BOGO (e.g., Get 1 free)
+
+  @@map("campaign_rules")
+}
+
