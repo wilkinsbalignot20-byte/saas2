@@ -39,6 +39,7 @@ model Store {
   storeKnowledge   StoreKnowledge[]
 
   orders           Order[]
+  couriers         Courier[]
 
   @@map("stores")
 }
@@ -196,4 +197,22 @@ model OrderItem {
   variant         ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
 
   @@map("order_items")
+}
+
+// 1. DAGDAG NA MODEL PARA SA COURIER/RIDER NG MATUKOY ANG TENANT ISOLATION
+model Courier {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String   // Pangalan ng Rider
+  phone         String   // Numero ng Rider para sa text/tawag ng customer
+  vehicleType   String   @default("Motorcycle") @map("vehicle_type") // Motorcycle, Bicycle, Tricycle, etc.
+  plateNumber   String?  @map("plate_number") // Opsyonal na plaka
+  status        String   @default("available") // "available", "busy", "inactive"
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // TENANT ISOLATION GUARD: Konektado sa Store para hindi makita ng ibang Store ang rider nito
+  storeId       String   @map("store_id") @db.Uuid
+  store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@map("couriers")
 }

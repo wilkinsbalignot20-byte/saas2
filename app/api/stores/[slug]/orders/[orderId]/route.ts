@@ -10,9 +10,9 @@ export async function PATCH(
     // Ligtas na i-await ang params para sa Next.js 16 execution context
     const { slug, orderId } = await context.params;
     const body = await request.json();
-    const { paymentStatus, shippingStatus } = body;
+    const { paymentStatus, shippingStatus, courierId } = body; // Kasama na ang courierId mula sa front-end panel
 
-    // 1. Kunin ang kasalukuyang estado ng order bago baguhin
+    // 1. KUNIN ANG KASALUKUYANG ESTADO NG ORDER BAGO BAGUHIN (Kasama ang dating courierId)
     const existingOrder = await prisma.order.findFirst({
       where: {
         id: orderId,
@@ -24,7 +24,7 @@ export async function PATCH(
     });
 
     if (!existingOrder) {
-      return NextResponse.json({ message: "Order not found for this store" }, { status: 404 });
+      return NextResponse.json({ error: "Order not found for this store" }, { status: 404 });
     }
 
     // Gagawa ng listahan ng mga updates para sa database transactions
@@ -67,13 +67,39 @@ export async function PATCH(
       }
     }
 
-    // 3. ISAMA ANG PANGUNAHING PAG-UPDATE NG STATUS NG ORDER
+    // 3. AUTOMATED LOGISTICS STATE TRANSITION MANAGEMENT
+    // CASE A: Ang order ay dinala sa 'shipped' state at may piniling courier -> Gawaing BUSY ang Rider
+    if (shippingStatus === "shipped" && courierId) {
+      databaseOperations.push(
+        prisma.courier.update({
+          where: { id: courierId },
+          data: { status: "busy" }
+        })
+      );
+    }
+
+    // CASE B: Ang order ay natapos na ('delivered') o kinansela ('cancelled') -> IBALIK SA AVAILABLE ang Rider
+    // Kinukuha natin ang courierId mula sa current payload o kaya sa database instance (`existingOrder.courierId`)
+    const targetCourierId = courierId || (existingOrder as any)["courierId"];
+    
+    if ((shippingStatus === "delivered" || shippingStatus === "cancelled") && targetCourierId) {
+      databaseOperations.push(
+        prisma.courier.update({
+          where: { id: targetCourierId },
+          data: { status: "available" }
+        })
+      );
+    }
+
+    // 4. ISAMA ANG PANGUNAHING PAG-UPDATE NG STATUS NG ORDER (May kasamang Courier Attachment Layer)
     databaseOperations.push(
       prisma.order.update({
         where: { id: orderId },
         data: {
           paymentStatus,
           shippingStatus,
+          // Ikabit ang courierId kung ito ay shipping process, o panatilihin kung ito ay delivered/cancelled transitions.
+          ...(shippingStatus === "shipped" && { courierId: courierId || null }),
         },
       })
     );
@@ -88,7 +114,7 @@ export async function PATCH(
   } catch (error: any) {
     console.error("[ORDER_STATUS_PATCH_ERROR]", error);
     return NextResponse.json(
-      { message: "Internal Server Error", error: error.message }, 
+      { error: "Internal Server Error", message: error.message }, 
       { status: 500 }
     );
   }

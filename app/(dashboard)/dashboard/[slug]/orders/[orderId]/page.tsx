@@ -1,4 +1,4 @@
-// app/(dashboard)/dashboard/[slug]/orders/[orderId]/page.tsx
+ // app/(dashboard)/dashboard/[slug]/orders/[orderId]/page.tsx
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma"; // Siguraduhing tugma sa iyong prisma path
@@ -13,6 +13,16 @@ interface OrderIdPageProps {
 
 export default async function OrderIdPage({ params }: OrderIdPageProps) {
   const { slug, orderId } = await params;
+
+  // 🛡️ ACCIDENT ROUTING / CACHE BLOCKER
+  // Sinisiguro natin na ang pumasok na orderId ay sumusunod sa tamang UUID pattern ng database.
+  // Kung ito ay isang plain string tulad ng "logistics", awtomatiko natin itong ire-reject 
+  // gamit ang notFound() bago pa man ito makarating sa PostgreSQL query engine para maiwasan ang crash.
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\$/i;
+  
+  if (!uuidRegex.test(orderId)) {
+    return notFound();
+  }
 
   // 🛡️ TENANT ISOLATION GUARD: Siguraduhing sa store na ito talaga nakatali ang order
   const order = await prisma.order.findFirst({
