@@ -31,7 +31,7 @@ export const getSellerNavigation = (seller: string): NavGroup[] => [
     items: [
       { href: `/dashboard/${seller}/finance`, label: 'Finance & income', icon: 'wallet' },
       { href: `/dashboard/${seller}/marketing`, label: 'Vouchers & ads', icon: 'tag' },
-      { href: `/dashboard/${seller}/insight`, label: 'Insights', icon: 'chart' },
+      { href: `/dashboard/${seller}/insights`, label: 'Insights', icon: 'chart' },
     ],
   },
   {

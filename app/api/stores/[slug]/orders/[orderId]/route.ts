@@ -79,8 +79,7 @@ export async function PATCH(
     }
 
     // CASE B: Ang order ay natapos na ('delivered') o kinansela ('cancelled') -> IBALIK SA AVAILABLE ang Rider
-    // Kinukuha natin ang courierId mula sa current payload o kaya sa database instance (`existingOrder.courierId`)
-    const targetCourierId = courierId || (existingOrder as any)["courierId"];
+    const targetCourierId = courierId || existingOrder.courierId;
     
     if ((shippingStatus === "delivered" || shippingStatus === "cancelled") && targetCourierId) {
       databaseOperations.push(
@@ -91,16 +90,30 @@ export async function PATCH(
       );
     }
 
-    // 4. ISAMA ANG PANGUNAHING PAG-UPDATE NG STATUS NG ORDER (May kasamang Courier Attachment Layer)
+    // 4. TIMESTAMPS AT COURIER DATA LAYER MAPPING
+    const orderUpdateData: Record<string, any> = {
+      paymentStatus: paymentStatus !== undefined ? paymentStatus : existingOrder.paymentStatus,
+      shippingStatus: shippingStatus !== undefined ? shippingStatus : existingOrder.shippingStatus,
+    };
+
+    // Ligtas na i-sync ang courierId payload parameter
+    if (courierId !== undefined) {
+      orderUpdateData.courierId = courierId || null;
+    }
+
+    // ✅ AUTOMATED TIMESTAMPS: Itala ang petsa at oras sa Supabase columns
+    if (shippingStatus === "shipped" && existingOrder.shippingStatus !== "shipped") {
+      orderUpdateData.dispatchedAt = new Date();
+    }
+    if (shippingStatus === "delivered" && existingOrder.shippingStatus !== "delivered") {
+      orderUpdateData.deliveredAt = new Date();
+    }
+
+    // 5. ISAMA ANG PANGUNAHING PAG-UPDATE NG STATUS NG ORDER
     databaseOperations.push(
       prisma.order.update({
         where: { id: orderId },
-        data: {
-          paymentStatus,
-          shippingStatus,
-          // Ikabit ang courierId kung ito ay shipping process, o panatilihin kung ito ay delivered/cancelled transitions.
-          ...(shippingStatus === "shipped" && { courierId: courierId || null }),
-        },
+        data: orderUpdateData,
       })
     );
 

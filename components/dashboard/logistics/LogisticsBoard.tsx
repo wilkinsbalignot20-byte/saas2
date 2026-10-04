@@ -1,5 +1,4 @@
-// components/dashboard/logistics/LogisticsBoard.tsx
-"use client";
+ "use client";
 
 import { useState } from "react";
 import { Truck, PackageCheck, ClipboardList, Bike } from "lucide-react";
@@ -21,16 +20,19 @@ export default function LogisticsBoard({ slug, storeName, pickupAddress }: Logis
   const [tab, setTab] = useState("dispatch");
 
   const couriersApi = useResource<Courier>(`/api/stores/${slug}/couriers`);
-  const deliveriesApi = useResource<Delivery>(`/api/stores/${slug}/deliveries`);
+  
+  // ✅ ITINAMA: Idinirekta ang API path patungo sa 'orders' backend endpoint na umiiral sa project structures mo
+  const deliveriesApi = useResource<Delivery>(`/api/stores/${slug}/orders`);
 
   const refreshAll = async () => {
     await Promise.all([couriersApi.refresh(), deliveriesApi.refresh()]);
   };
 
-  const deliveries = deliveriesApi.data;
-  const couriers = couriersApi.data;
+  const deliveries = deliveriesApi.data || [];
+  const couriers = couriersApi.data || [];
   const todayKey = new Date().toDateString();
 
+  // Iningatan nating gumamit ng safe formatting loops para hindi mag-crash kung walang benta ang merchant sa Supabase
   const toDispatch = deliveries.filter((d) => d.shippingStatus === "unfulfilled").length;
   const inTransit = deliveries.filter((d) => d.shippingStatus === "shipped").length;
   const deliveredToday = deliveries.filter(
