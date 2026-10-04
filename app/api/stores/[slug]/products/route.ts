@@ -62,15 +62,11 @@ export async function POST(request: Request) {
     }
 
     // 4. MULTI-TENANT SKU ENFORCEMENT & INTEGRITY GUARD
-    // Sinisiguro natin na ang bawat SKU ay may kasamang identifier ng store slug sa unahan
-    // para hindi magka-clash ang magkaibang merchants na may parehong product structure.
     const cleanStorePrefix = slug.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 4);
     
     const isolatedVariants = variants.map((v: any) => {
       const rawSku = v.sku.trim().toUpperCase();
       
-      // Kung ang merchant ay manu-manong nag-type ng SKU at hindi nito sinimulan sa store slug prefix,
-      // awtomatiko nating ididikit ito sa unahan para sa database isolation layer.
       const securedSku = rawSku.startsWith(cleanStorePrefix) 
         ? rawSku 
         : `${cleanStorePrefix}-${rawSku}`;
@@ -93,13 +89,46 @@ export async function POST(request: Request) {
         storeId: store.id,
         categoryId: finalCategoryId,
         variants: {
-          create: isolatedVariants, // Gamitin ang isolated variants na may protektadong SKU
+          create: isolatedVariants,
         },
       },
       include: {
         variants: true,
       },
     });
+
+    // 🌐 6. AUTOMATION LAYER: FACEBOOK AUTO-POST HOOK (BAGO)
+    // Awtomatikong mag-ti-trigger LAMANG kapag ang status ng produkto ay "published"
+    if (status === 'published') {
+      try {
+        // Kunin ang base url ng system mula sa requests para sa absolute routing path mechanics
+        const { origin } = new URL(request.url);
+        
+        // Kunin ang panimulang presyo ng unang variant para sa caption layout profiling
+        const startingPrice = Number(newProduct.variants[0]?.price || 0);
+        
+        // Buuin ang pampublikong link ng produkto na makikita sa 'shop/[slug]' storefront marketplace sector
+        const productLink = `${origin}/shop/${slug}/products/${newProduct.id}`;
+
+        // Tawagin ang multi-method endpoint route handler na paborito mong diskarte gamit ang fetch background promise
+        // Gumagamit ng payload string action na TRIGGER_AUTO_POST gaya ng isinulat natin sa facebook/route.ts
+        fetch(`${origin}/api/stores/${slug}/automation/facebook`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            action: 'TRIGGER_AUTO_POST',
+            productName: newProduct.name,
+            price: startingPrice,
+            productLink: productLink,
+          }),
+        }).catch((err) => console.error('[FB Auto-Post Background Call Failed]:', err));
+
+      } catch (autoErr) {
+        // Ibalot sa fail-silent try-catch block para kung magka-error man ang Facebook, 
+        // hindi ma-re-reject o ma-ro-roll back ang pagkaka-save ng produkto sa database mo.
+        console.error('[FB Automation Initialization Error]:', autoErr);
+      }
+    }
 
     return NextResponse.json(newProduct, { status: 201 });
 

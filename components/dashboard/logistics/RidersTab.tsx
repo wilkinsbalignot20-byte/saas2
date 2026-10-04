@@ -59,12 +59,13 @@ export default function RidersTab({ slug, couriers, loading, error, onChanged }:
   const [vehicleType, setVehicleType] = useState("Motorcycle");
   const [plateNumber, setPlateNumber] = useState("");
 
-  const errors = {
-    name: name.trim().length < 2 ? "Enter the rider's full name." : "",
-    phone: normalizePhone(phone) ? "" : "Enter a valid PH mobile number (e.g. 09171234567).",
-  };
-  const hasErrors = Boolean(errors.name || errors.phone);
   const showErr = (m: string) => (submitted ? m : "");
+
+  const errors = {
+    name: showErr(name.trim().length < 2 ? "Enter the rider's full name." : ""),
+    phone: showErr(normalizePhone(phone) ? "" : "Enter a valid PH mobile number (e.g. 09171234567)."),
+  };
+  const hasErrors = Boolean(name.trim().length < 2 || !normalizePhone(phone));
 
   const resetForm = () => {
     setName("");

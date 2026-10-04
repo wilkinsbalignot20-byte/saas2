@@ -44,6 +44,9 @@ model Store {
   vouchers         Voucher[]
   campaigns        Campaign[]
 
+  fbPageId         String?  @map("fb_page_id")
+  fbPageAccessToken String? @map("fb_page_access_token") @db.Text
+
 
   @@map("stores")
 }

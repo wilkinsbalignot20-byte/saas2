@@ -190,15 +190,15 @@ export default function ProductForm({ categories, slug, storeName, productId, in
         }))
       };
 
-      const response = await fetch('/api/products', {
+      const res = await fetch(`/api/stores/${slug}/products`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(productPayload)
       });
 
-      const responseData = await response.json();
+      const responseData = await res.json();
 
-      if (!response.ok) {
+      if (!res.ok) {
         throw new Error(responseData.error || 'Server rejected database payload integration.');
       }
 

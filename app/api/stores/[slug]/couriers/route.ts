@@ -1,4 +1,4 @@
- // app/api/stores/[slug]/couriers/route.ts
+  // app/api/stores/[slug]/couriers/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
@@ -17,7 +17,7 @@ function normalizePhone(raw: unknown): string | null {
   let local = digits;
   if (digits.startsWith("63") && digits.length === 12) local = "0" + digits.slice(2);
   else if (digits.length === 10 && digits.startsWith("9")) local = "0" + digits;
-  return /^09\d{9}\$/.test(local) ? local : null;
+  return /^09\d{9}$/.test(local) ? local : null;
 }
 
 async function getStore(slug: string) {
