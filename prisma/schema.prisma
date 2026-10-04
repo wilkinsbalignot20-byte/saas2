@@ -164,7 +164,7 @@ model ChatMessage {
   @@map("chat_messages")
 }
 
-model Order {
+ model Order {
   id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   orderNumber     String   @unique @map("order_number")
   createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
@@ -184,8 +184,36 @@ model Order {
   store           Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
   orderItems      OrderItem[]
 
+  // 🚚 BAGO: DELIVERY / DISPATCH TRACKING FIELDS
+  courierId       String?   @map("courier_id") @db.Uuid
+  courier         Courier?  @relation(fields: [courierId], references: [id], onDelete: SetNull)
+  dispatchedAt    DateTime? @map("dispatched_at") @db.Timestamptz
+  deliveredAt     DateTime? @map("delivered_at") @db.Timestamptz
+
   @@index([storeId])
+  @@index([courierId]) // 🚚 BAGO: Index para sa mabilis na paghahanap ng orders ng rider
   @@map("orders")
+}
+
+model Courier {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name          String
+  phone         String
+  vehicleType   String   @default("Motorcycle") @map("vehicle_type")
+  plateNumber   String?  @map("plate_number")
+  status        String   @default("available")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // TENANT ISOLATION GUARD: Naka-lock sa iisang tindahan
+  storeId       String   @map("store_id") @db.Uuid
+  store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  // 🚚 BAGO: Malinis at aktibong back-relation array (Ito ang naging malabo sa gawa ni Claude)
+  orders        Order[]
+
+  @@index([storeId]) // 🚚 BAGO: Index para sa mabilis na pag-load ng fleet per store
+  @@map("couriers")
 }
 
 model OrderItem {
@@ -195,31 +223,16 @@ model OrderItem {
   productName     String   @map("product_name")
   variantName     String   @map("variant_name")
   variantSku      String   @map("variant_sku")
+  
   orderId         String   @map("order_id") @db.Uuid
   order           Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  
   variantId       String?  @map("variant_id") @db.Uuid
   variant         ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
 
   @@map("order_items")
 }
 
-// 1. DAGDAG NA MODEL PARA SA COURIER/RIDER NG MATUKOY ANG TENANT ISOLATION
-model Courier {
-  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name          String   // Pangalan ng Rider
-  phone         String   // Numero ng Rider para sa text/tawag ng customer
-  vehicleType   String   @default("Motorcycle") @map("vehicle_type") // Motorcycle, Bicycle, Tricycle, etc.
-  plateNumber   String?  @map("plate_number") // Opsyonal na plaka
-  status        String   @default("available") // "available", "busy", "inactive"
-  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt     DateTime @updatedAt @map("updated_at") @db.Timestamptz
-
-  // TENANT ISOLATION GUARD: Konektado sa Store para hindi makita ng ibang Store ang rider nito
-  storeId       String   @map("store_id") @db.Uuid
-  store         Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
-
-  @@map("couriers")
-}
 // ==========================================
 // 🆕 MARKETING SECTOR MODES & PLACEMENTS
 // ==========================================
@@ -227,10 +240,10 @@ model Courier {
 model Voucher {
   id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   code          String   // Halimbawa: LESS200, PASKO10
-  discountType  String   // "FIXED" (gaya ng Less 200) o "PERCENTAGE" (gaya ng 10% off)
+  discountType  String   @map("discount_type")
   discountValue Decimal  @map("discount_value") @db.Decimal(10, 2)
   minSpend      Decimal  @default(0.00) @map("min_spend") @db.Decimal(10, 2)
-  maxClaims     Int?     @map("max_claims") // Kung may limitasyon ba ang pwedeng gumamit (e.g., Unang 50 na tao)
+  maxClaims     Int?     @map("max_claims") 
   claimedCount  Int      @default(0) @map("claimed_count")
   isActive      Boolean  @default(true) @map("is_active")
   expiresAt     DateTime? @map("expires_at") @db.Timestamptz
