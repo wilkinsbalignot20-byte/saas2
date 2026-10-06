@@ -46,6 +46,11 @@ model Store {
 
   fbPageId         String?  @map("fb_page_id")
   fbPageAccessToken String? @map("fb_page_access_token") @db.Text
+  // ILAGAY ITO SA LOOB NG model Store { ... } SA ILALIM NG fbPageAccessToken
+
+  slackWebhookUrl    String?  @map("slack_webhook_url") @db.Text
+  viberBotToken      String?  @map("viber_bot_token") @db.Text
+
 
 
   @@map("stores")

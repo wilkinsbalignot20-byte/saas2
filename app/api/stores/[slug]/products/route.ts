@@ -97,38 +97,55 @@ export async function POST(request: Request) {
       },
     });
 
-    // 🌐 6. AUTOMATION LAYER: FACEBOOK AUTO-POST HOOK (BAGO)
-    // Awtomatikong mag-ti-trigger LAMANG kapag ang status ng produkto ay "published"
-    if (status === 'published') {
-      try {
-        // Kunin ang base url ng system mula sa requests para sa absolute routing path mechanics
-        const { origin } = new URL(request.url);
-        
-        // Kunin ang panimulang presyo ng unang variant para sa caption layout profiling
-        const startingPrice = Number(newProduct.variants[0]?.price || 0);
-        
-        // Buuin ang pampublikong link ng produkto na makikita sa 'shop/[slug]' storefront marketplace sector
-        const productLink = `${origin}/shop/${slug}/products/${newProduct.id}`;
+// 🌐 6. AUTOMATION LAYER: FACEBOOK AUTO-POST HOOK (DIREKTA AT LIGTAS)
+if (status === 'published') {
+  try {
+    const { origin } = new URL(request.url);
+    const startingPrice = Number(newProduct.variants[0]?.price || 0);
+    const productLink = `${origin}/shop/${slug}/products/${newProduct.id}`;
 
-        // Tawagin ang multi-method endpoint route handler na paborito mong diskarte gamit ang fetch background promise
-        // Gumagamit ng payload string action na TRIGGER_AUTO_POST gaya ng isinulat natin sa facebook/route.ts
-        fetch(`${origin}/api/stores/${slug}/automation/facebook`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            action: 'TRIGGER_AUTO_POST',
-            productName: newProduct.name,
-            price: startingPrice,
-            productLink: productLink,
-          }),
-        }).catch((err) => console.error('[FB Auto-Post Background Call Failed]:', err));
+    // 1. Kuhanin ang Facebook Credentials nang direkta mula sa nahanap nang store record
+    const fbStoreCredentials = await prisma.store.findUnique({
+      where: { id: store.id },
+      select: { fbPageId: true, fbPageAccessToken: true }
+    });
 
-      } catch (autoErr) {
-        // Ibalot sa fail-silent try-catch block para kung magka-error man ang Facebook, 
-        // hindi ma-re-reject o ma-ro-roll back ang pagkaka-save ng produkto sa database mo.
-        console.error('[FB Automation Initialization Error]:', autoErr);
-      }
+    // 2. Patakbuhin lamang kung kumpleto ang integration ng tenant
+    if (fbStoreCredentials?.fbPageId && fbStoreCredentials?.fbPageAccessToken) {
+      const message = `✨ BAGONG PRODUKTO ALERT! ✨\n\n📌 ${newProduct.name}\n💰 Presyo: ₱${startingPrice.toLocaleString()}\n\nHuwag nang magpatumpik-tumpik pa! Tingnan at i-order na sa aming website.\n\n🛒 Bumili rito: ${productLink}`;
+
+      // Inilagay sa background execution nang hindi hinaharangan ang response ng Product creation
+      (async () => {
+        try {
+          // Ginamit ang v21.0 (Stable Active Meta Graph Version)
+          const fbResponse = await fetch(`https://facebook.com{fbStoreCredentials.fbPageId}/feed`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              message: message,
+              link: productLink,
+              access_token: fbStoreCredentials.fbPageAccessToken,
+            }),
+          });
+
+          const fbData = await fbResponse.json();
+          if (!fbResponse.ok) {
+            console.error("[Meta API Core Error]:", fbData.error?.message || "Unknown Meta Error");
+          } else {
+            console.log(`\x1b[34m[Facebook Automation] SUCCESS! Post ID: ${fbData.id}\x1b[0m`);
+          }
+        } catch (fetchErr) {
+          console.error("[FB Network Request Failed]:", fetchErr);
+        }
+      })();
+    } else {
+      console.log(`[FB Automation] Skipped: Store ${slug} is not fully configured for Facebook posting.`);
     }
+
+  } catch (autoErr) {
+    console.error('[FB Automation Initialization Error]:', autoErr);
+  }
+}
 
     return NextResponse.json(newProduct, { status: 201 });
 
