@@ -6,8 +6,8 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { RefreshCw, ExternalLink } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client'; // Eksaktong import base sa export mo
-import DashboardMetrics from '@/components/dashboard/DashboardMetrics';
-import RecentOrdersTable from '@/components/dashboard/RecentOrdersTable';
+import DashboardMetrics from '@/components/dashboard/board/DashboardMetrics';
+import RecentOrdersTable from '@/components/dashboard/board/RecentOrdersTable';
 
 const supabase = createClient(); // Tinawag ang Browser Client mo
 

@@ -1,10 +1,10 @@
  // app/page.tsx
 import Link from 'next/link';
-import Navbar from '@/components/Navbar';
-import Hero from '@/components/Hero';
-import FAQSection from '@/components/FAQSection';
+import Navbar from '@/components/Homepage/about/Navbar';
+import Hero from '@/components/Homepage/Hero';
+import FAQSection from '@/components/Homepage/FAQSection';
 // 🆕 INIMPORT ANG IYONG AI WIDGET COMPONENT
-import ChatWidget from '@/components/marketplace/chat-widget'; 
+import ChatWidget from '@/components/Homepage/chat-widget'; 
 
 export default function SaasLandingPage() {
   return (

@@ -1,8 +1,8 @@
  // app/about/page.tsx
 import React from 'react';
 import Link from 'next/link';
-import Navbar from '@/components/Navbar';
-import AnimatedContent from '@/components/AnimatedContent';
+import Navbar from '@/components/Homepage/about/Navbar';
+import AnimatedContent from '@/components/Homepage/about/AnimatedContent';
 
 export default function AboutPage() {
   return (

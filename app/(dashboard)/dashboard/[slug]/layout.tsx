@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Settings, LogOut } from 'lucide-react';
 import { createClient } from '@/lib/supabase/server'; // Eksaktong import base sa export mo
 import { getSellerNavigation } from '@/constants/navigation';
-import SellerSidebarNav from '@/components/dashboard/SellerSidebarNav';
+import SellerSidebarNav from '@/components/dashboard/board/SellerSidebarNav';
 
 export const metadata: Metadata = {
   title: 'Seller Center — Manipu',

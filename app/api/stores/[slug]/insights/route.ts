@@ -203,7 +203,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
       fulfillment: Object.entries(fulfillment).map(([status, count]) => ({ status, count })),
       payment: Object.entries(payment).map(([status, count]) => ({ status, count })),
       weekday: [1, 2, 3, 4, 5, 6, 0].map((i) => weekday[i]), // Mon → Sun
-      vouchers: vouchers.map((v) => ({
+      vouchers: vouchers.map((v: any) => ({
         code: v.code,
         claims: v.claimedCount,
         maxClaims: v.maxClaims,
@@ -212,8 +212,8 @@ export async function GET(req: NextRequest, context: RouteContext) {
         isActive: v.isActive,
         expiresAt: v.expiresAt,
       })),
-      lowStock: lowStockRows.map((v) => ({ productName: v.product.name, variantName: v.name, sku: v.sku, stock: v.stock })),
-      recentOrders: recent.map((o) => ({ ...o, totalAmount: Number(o.totalAmount) })),
+      lowStock: lowStockRows.map((v: any) => ({ productName: v.product.name, variantName: v.name, sku: v.sku, stock: v.stock })),
+      recentOrders: recent.map((o: any) => ({ ...o, totalAmount: Number(o.totalAmount) })),
     });
   } catch (error) {
     console.error("Insights GET Error:", error);

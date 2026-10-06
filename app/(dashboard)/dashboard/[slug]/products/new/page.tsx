@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronLeft } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
-import ProductForm from '@/components/dashboard/ProductForm';
+import ProductForm from '@/components/dashboard/products/productid/ProductForm';
 
 interface NewProductPageProps {
   params: Promise<{ slug: string }>;

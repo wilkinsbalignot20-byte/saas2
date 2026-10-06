@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import AuthSidebar from '@/components/AuthSidebar';
+import AuthSidebar from '@/components/Login/AuthSidebar';
 import { Mail, Lock, ArrowRight, RefreshCw, AlertCircle } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 

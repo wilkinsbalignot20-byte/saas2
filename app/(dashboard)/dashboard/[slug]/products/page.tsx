@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { PlusCircle, Package } from 'lucide-react';
 import { prisma } from '@/lib/prisma';
-import ProductTable from '@/components/dashboard/ProductTable';
+import ProductTable from '@/components/dashboard/products/ProductTable';
 
 interface ProductsPageProps {
   params: Promise<{ slug: string }>;

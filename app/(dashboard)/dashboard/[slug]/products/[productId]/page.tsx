@@ -1,7 +1,7 @@
 // app/(dashboard)/dashboard/[slug]/products/[productId]/page.tsx
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma"; 
-import ProductForm from "@/components/dashboard/ProductForm"; 
+import ProductForm from "@/components/dashboard/products/productid/ProductForm"; 
 
 interface ProductIdPageProps {
   params: Promise<{

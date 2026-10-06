@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import PrivacyModal from '@/components/PrivacyModal';
+import PrivacyModal from '@/components/Signup/PrivacyModal';
 import { createClient } from '@/lib/supabase/client';
 
 export default function SellerSignUpPage() {
