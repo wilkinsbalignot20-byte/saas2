@@ -74,7 +74,7 @@ export async function GET(_req: NextRequest, context: RouteContext) {
       deliveryCounts(store.id),
     ]);
 
-    const result = couriers.map((c) => {
+    const result = couriers.map((c: any) => {
       const stat = counts.get(c.id) ?? { active: 0, delivered: 0 };
       return {
         ...c,

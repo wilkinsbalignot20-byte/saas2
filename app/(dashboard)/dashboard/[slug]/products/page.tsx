@@ -41,9 +41,9 @@ export default async function MerchantProductsPage({ params }: ProductsPageProps
 
   // 2. DATA SERIALIZATION GATEWAY: DITO NATIN AAYUSIN ANG DECIMAL ERROR
   // Ginagawa nating plain JavaScript object ang data at sine-serialize ang Decimal fields patungong Number
-  const products = rawProducts.map((product) => ({
+  const products = rawProducts.map((product: any) => ({
     ...product,
-    variants: product.variants.map((variant) => ({
+    variants: product.variants.map((variant: any) => ({
       ...variant,
       price: Number(variant.price), // ➔ GINAWANG NORMAL NA NUMBER PARA TANGGAPIN NG NEXT.JS CLIENT
     })),

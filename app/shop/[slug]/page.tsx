@@ -61,7 +61,7 @@ const store = await prisma.store.findUnique({
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {store.products.map((product) => {
+            {store.products.map((product: any) => {
               // LIGTAS NA PAGKUHA NG PRESYO MULA SA ARRAY NG VARIANTS
               const hasVariants = product.variants && product.variants.length > 0;
               const displayPrice = hasVariants ? Number(product.variants[0].price) : 0;

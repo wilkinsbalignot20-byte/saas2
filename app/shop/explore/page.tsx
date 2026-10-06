@@ -41,15 +41,15 @@ export default async function PublicMarketplaceExplorePage({
   ]);
 
   // Normalize: compute lowest price once per product
-  const products = rawProducts.map((p) => {
-    const prices = p.variants.map((v) => Number(v.price)).filter((n) => !Number.isNaN(n));
+  const products = rawProducts.map((p: any) => {
+    const prices = p.variants.map((v: any) => Number(v.price)).filter((n: any) => !Number.isNaN(n));
     const minPrice = prices.length ? Math.min(...prices) : 0;
     const hasRange = prices.length > 1 && Math.max(...prices) !== minPrice;
     return { ...p, minPrice, hasRange };
   });
 
-  if (sort === 'price-asc') products.sort((a, b) => a.minPrice - b.minPrice);
-  if (sort === 'price-desc') products.sort((a, b) => b.minPrice - a.minPrice);
+  if (sort === 'price-asc') products.sort((a: any, b: any) => a.minPrice - b.minPrice);
+  if (sort === 'price-desc') products.sort((a: any, b: any) => b.minPrice - a.minPrice);
 
   // Unique shops (with product count) from the full result set
   const shopMap = new Map<string, { name: string; slug: string; count: number }>();
@@ -78,7 +78,7 @@ export default async function PublicMarketplaceExplorePage({
       label: 'Mga Kategorya',
       bgColor: '#2D4A3B',
       textColor: '#fff',
-      links: categories.slice(0, 4).map((c) => ({
+      links: categories.slice(0, 4).map((c: any) => ({
         label: c.name,
         ariaLabel: `Tingnan ang ${c.name}`,
         href: `/shop/${c.store.slug}?category=${c.slug}`,
@@ -88,7 +88,7 @@ export default async function PublicMarketplaceExplorePage({
       label: 'Bagong Dating',
       bgColor: '#3E8F68',
       textColor: '#fff',
-      links: newest.slice(0, 3).map((p) => ({
+      links: newest.slice(0, 3).map((p: any) => ({
         label: p.name,
         ariaLabel: `Tingnan ang ${p.name}`,
         href: `/shop/${p.store.slug}`,
@@ -225,7 +225,7 @@ export default async function PublicMarketplaceExplorePage({
             </div>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-3 lg:grid-cols-4">
-              {products.map((product) => {
+              {products.map((product: any) => {
                 const cover = product.images?.[0];
                 const storeHref = `/shop/${product.store?.slug}`;
 

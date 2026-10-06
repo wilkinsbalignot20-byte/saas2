@@ -1,6 +1,7 @@
- // app/(dashboard)/dashboard/[slug]/orders/page.tsx
+  // app/(dashboard)/dashboard/[slug]/orders/page.tsx
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { Order, OrderItem } from "@prisma/client";
 import { OrdersDataTable } from "@/components/dashboard/orders/OrdersDataTable";
 
 interface OrdersPageProps {
@@ -32,12 +33,12 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
   });
 
   // 📊 SUMMARY (cancelled orders hindi isinasama sa revenue at pending counts)
-  const active = orders.filter((o) => o.shippingStatus !== "cancelled");
+  const active = orders.filter((order : Order) => order.shippingStatus !== "cancelled");
   const revenue = active
-    .filter((o) => o.paymentStatus === "paid")
-    .reduce((sum, o) => sum + Number(o.totalAmount), 0);
-  const toFulfill = active.filter((o) => o.shippingStatus === "unfulfilled").length;
-  const awaitingPayment = active.filter((o) => o.paymentStatus === "pending").length;
+    .filter((order : Order) => order.paymentStatus === "paid")
+    .reduce((sum, order : Order) => sum + Number(order.totalAmount), 0);
+  const toFulfill = active.filter((order : Order) => order.shippingStatus === "unfulfilled").length;
+  const awaitingPayment = active.filter((order : Order) => order.paymentStatus === "pending").length;
 
   const stats = [
     { label: "Total orders", value: orders.length.toLocaleString("en-PH"), hint: "All time" },
@@ -47,7 +48,7 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
   ];
 
   // Safe serialization para sa Decimal at Date types
-  const serializedOrders = orders.map((order) => ({
+  const serializedOrders = orders.map((order : any) => ({
     ...order,
     subtotal: order.subtotal.toString(),
     shippingFee: order.shippingFee.toString(),
@@ -55,7 +56,7 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
     totalAmount: order.totalAmount.toString(),
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
-    orderItems: order.orderItems.map((item) => ({
+    orderItems: order.orderItems.map((item : any) => ({
       ...item,
       priceAtPurchase: item.priceAtPurchase.toString(),
     })),

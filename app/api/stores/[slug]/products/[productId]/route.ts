@@ -41,7 +41,7 @@ export async function PATCH(
 
     // 2. CORE DATABASE BATCH TRANSACTION
     // Patakbuhin natin sa loob ng transaction para sigurado tayong hindi masisira ang catalog kung magka-error
-    const updatedProduct = await prisma.$transaction(async (tx) => {
+    const updatedProduct = await prisma.$transaction(async (tx: any) => {
       
       // A. I-update ang pangunahing impormasyon ng produkto
       const prod = await tx.product.update({
@@ -64,7 +64,7 @@ export async function PATCH(
       // Alamin kung alin ang mga dapat burahin (mga wala sa bagong listahan na ipinadala ng client)
       const incomingSkus = variants.map((v: any) => v.sku.trim());
       const variantsToDelete = currentDbVariants.filter(
-        (dbV) => !incomingSkus.includes(dbV.sku)
+        (dbV: any) => !incomingSkus.includes(dbV.sku)
       );
 
       // Burahin ang mga tinanggal na variants sa optimizer UI table
@@ -72,7 +72,7 @@ export async function PATCH(
         await tx.productVariant.deleteMany({
           where: {
             id: {
-              in: variantsToDelete.map((v) => v.id)
+              in: variantsToDelete.map((v: any) => v.id)
             }
           }
         });

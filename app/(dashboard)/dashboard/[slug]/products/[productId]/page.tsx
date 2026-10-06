@@ -63,7 +63,7 @@ export default async function ProductIdPage({ params }: ProductIdPageProps) {
     images: product.images,
     status: product.status,
     categoryId: product.categoryId,
-    variants: product.variants.map((variant) => ({
+    variants: product.variants.map((variant: any) => ({
       name: variant.name,
       sku: variant.sku,
       price: variant.price.toString(), // In-align sa string format para sa state mo sa client side

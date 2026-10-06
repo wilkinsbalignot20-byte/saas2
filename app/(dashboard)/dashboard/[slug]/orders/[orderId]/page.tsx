@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma"; // Siguraduhing tugma sa iyong prisma path
 import { OrderStatusCard } from "@/components/dashboard/orders/OrderStatusCard";
+import { OrderItem } from "@prisma/client";
 
 interface OrderIdPageProps {
   params: Promise<{
@@ -82,7 +83,7 @@ export default async function OrderIdPage({ params }: OrderIdPageProps) {
             <h3 className="text-sm font-semibold text-slate-900 dark:text-white mb-4">Order Items</h3>
             
             <div className="divide-y divide-slate-100 dark:divide-slate-800">
-              {order.orderItems.map((item) => (
+              {order.orderItems.map((item: OrderItem) => (
                 <div key={item.id} className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
                   <div>
                     <h4 className="font-medium text-sm text-slate-900 dark:text-white">{item.productName}</h4>
