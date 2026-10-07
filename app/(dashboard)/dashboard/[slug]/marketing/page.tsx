@@ -1,4 +1,4 @@
- // app/(dashboard)/dashboard/[slug]/marketing/page.tsx
+  // app/(dashboard)/dashboard/[slug]/marketing/page.tsx
 import type { CSSProperties } from "react";
 import { notFound } from "next/navigation";
 import { Ticket, Zap, Boxes, Rocket } from "lucide-react";

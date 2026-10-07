@@ -304,7 +304,10 @@ model CampaignRule {
   promoPrice      Decimal? @map("promo_price") @db.Decimal(10, 2) // Bagong presyo kapag flash sale
   requiredQuantity Int     @default(1) @map("required_quantity") // Para sa BOGO (e.g., Buy 2 items)
   freeQuantity     Int     @default(0) @map("free_quantity") // Para sa BOGO (e.g., Get 1 free)
+  discountType    String   @default("PERCENTAGE") @map("discount_type") // "PERCENTAGE" o "FIXED"
+  discountValue   Decimal  @default(0.00) @map("discount_value") @db.Decimal(10, 2) // Halimbawa: 20.00 para sa 20% OFF
 
   @@map("campaign_rules")
 }
+
 

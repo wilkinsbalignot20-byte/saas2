@@ -1,8 +1,15 @@
- // app/api/products/route.ts
+ // app/api/stores/[slug]/products/route.ts
 
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+type RouteContext = {
+  params: Promise<{ slug: string }>;
+};
+
+// ==========================================
+// 📦 1. POST METHOD: GUMAWA NG PRODUKTO
+// ==========================================
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -97,55 +104,51 @@ export async function POST(request: Request) {
       },
     });
 
-// 🌐 6. AUTOMATION LAYER: FACEBOOK AUTO-POST HOOK (DIREKTA AT LIGTAS)
-if (status === 'published') {
-  try {
-    const { origin } = new URL(request.url);
-    const startingPrice = Number(newProduct.variants[0]?.price || 0);
-    const productLink = `${origin}/shop/${slug}/products/${newProduct.id}`;
+    // 🌐 6. AUTOMATION LAYER: FACEBOOK AUTO-POST HOOK (DIREKTA AT LIGTAS)
+    if (status === 'published') {
+      try {
+        const { origin } = new URL(request.url);
+        const startingPrice = Number(newProduct.variants[0]?.price || 0);
+        const productLink = `${origin}/shop/${slug}/products/${newProduct.id}`;
 
-    // 1. Kuhanin ang Facebook Credentials nang direkta mula sa nahanap nang store record
-    const fbStoreCredentials = await prisma.store.findUnique({
-      where: { id: store.id },
-      select: { fbPageId: true, fbPageAccessToken: true }
-    });
+        const fbStoreCredentials = await prisma.store.findUnique({
+          where: { id: store.id },
+          select: { fbPageId: true, fbPageAccessToken: true }
+        });
 
-    // 2. Patakbuhin lamang kung kumpleto ang integration ng tenant
-    if (fbStoreCredentials?.fbPageId && fbStoreCredentials?.fbPageAccessToken) {
-      const message = `✨ BAGONG PRODUKTO ALERT! ✨\n\n📌 ${newProduct.name}\n💰 Presyo: ₱${startingPrice.toLocaleString()}\n\nHuwag nang magpatumpik-tumpik pa! Tingnan at i-order na sa aming website.\n\n🛒 Bumili rito: ${productLink}`;
+        if (fbStoreCredentials?.fbPageId && fbStoreCredentials?.fbPageAccessToken) {
+          const message = `✨ BAGONG PRODUKTO ALERT! ✨\n\n📌 ${newProduct.name}\n💰 Presyo: ₱${startingPrice.toLocaleString()}\n\nHuwag nang magpatumpik-tumpik pa! Tingnan at i-order na sa aming website.\n\n🛒 Bumili rito: ${productLink}`;
 
-      // Inilagay sa background execution nang hindi hinaharangan ang response ng Product creation
-      (async () => {
-        try {
-          // Ginamit ang v21.0 (Stable Active Meta Graph Version)
-          const fbResponse = await fetch(`https://facebook.com{fbStoreCredentials.fbPageId}/feed`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              message: message,
-              link: productLink,
-              access_token: fbStoreCredentials.fbPageAccessToken,
-            }),
-          });
+          (async () => {
+            try {
+              const fbResponse = await fetch(`https://facebook.com{fbStoreCredentials.fbPageId}/feed`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  message: message,
+                  link: productLink,
+                  access_token: fbStoreCredentials.fbPageAccessToken,
+                }),
+              });
 
-          const fbData = await fbResponse.json();
-          if (!fbResponse.ok) {
-            console.error("[Meta API Core Error]:", fbData.error?.message || "Unknown Meta Error");
-          } else {
-            console.log(`\x1b[34m[Facebook Automation] SUCCESS! Post ID: ${fbData.id}\x1b[0m`);
-          }
-        } catch (fetchErr) {
-          console.error("[FB Network Request Failed]:", fetchErr);
+              const fbData = await fbResponse.json();
+              if (!fbResponse.ok) {
+                console.error("[Meta API Core Error]:", fbData.error?.message || "Unknown Meta Error");
+              } else {
+                console.log(`\x1b[34m[Facebook Automation] SUCCESS! Post ID: ${fbData.id}\x1b[0m`);
+              }
+            } catch (fetchErr) {
+              console.error("[FB Network Request Failed]:", fetchErr);
+            }
+          })();
+        } else {
+          console.log(`[FB Automation] Skipped: Store ${slug} is not fully configured for Facebook posting.`);
         }
-      })();
-    } else {
-      console.log(`[FB Automation] Skipped: Store ${slug} is not fully configured for Facebook posting.`);
-    }
 
-  } catch (autoErr) {
-    console.error('[FB Automation Initialization Error]:', autoErr);
-  }
-}
+      } catch (autoErr) {
+        console.error('[FB Automation Initialization Error]:', autoErr);
+      }
+    }
 
     return NextResponse.json(newProduct, { status: 201 });
 
@@ -158,5 +161,56 @@ if (status === 'published') {
       );
     }
     return NextResponse.json({ error: 'Internal system database insertion error occurred.' }, { status: 500 });
+  }
+}
+
+// ==========================================
+// 🎟️ 2. GET METHOD: KUNIN ANG MGA PRODUKTO
+// ==========================================
+export async function GET(request: NextRequest, context: RouteContext) {
+  try {
+    // ✅ INAYOS: Kinukuha ang slug nang direkta mula sa context.params ng URL router configuration
+    const { slug } = await context.params;
+
+    if (!slug) {
+      return NextResponse.json({ error: 'Kulang ang tenant slug parameter.' }, { status: 400 });
+    }
+
+    // Hanapin ang store ID gamit ang slug parameter profile guard
+    const store = await prisma.store.findUnique({
+      where: { slug: slug },
+      select: { id: true }
+    });
+
+    if (!store) {
+      return NextResponse.json({ error: 'Hindi nahanap ang tindahan.' }, { status: 404 });
+    }
+
+    // Kunin ang mga published products ng store kasama ang taglay nitong variants at presyo
+    const products = await prisma.product.findMany({
+      where: {
+        storeId: store.id,
+        status: 'published' 
+      },
+      select: {
+        id: true,
+        name: true,
+        images: true,
+        variants: {
+          select: {
+            id: true,
+            name: true,
+            price: true,
+            sku: true
+          }
+        }
+      },
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return NextResponse.json(products);
+  } catch (error) {
+    console.error('BACK-END PRODUCTS GET ERROR:', error);
+    return NextResponse.json({ error: 'Internal server query error occurred.' }, { status: 500 });
   }
 }

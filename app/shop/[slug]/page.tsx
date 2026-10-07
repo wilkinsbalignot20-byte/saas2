@@ -3,15 +3,13 @@
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 
-// MGA KASALUKUYANG IMPORTS MO
+// MGA IMPORTS NG IYONG MGA COMPONENTS
 import StorefrontHeader from '@/components/marketplace/shop/StorefrontHeader';
 import SearchDiscoveryBar from '@/components/marketplace/shop/SearchDiscoveryBar';
 import ProductGrid from '@/components/marketplace/shop/ProductGrid';
 import MarketingSidebar from '@/components/marketplace/shop/MarketingSidebar';
 import StorePerks from '@/components/marketplace/shop/StorePerks';
 import StorefrontFooter from '@/components/marketplace/shop/StorefrontFooter';
-
-// FLASH SALE COMPONENT IMPORT
 import FlashSaleBanner from '@/components/marketplace/shop/marketing/FlashSaleBanner';
 
 interface TenantStorefrontProps {
@@ -21,7 +19,7 @@ interface TenantStorefrontProps {
 export default async function TenantStorefrontPage({ params }: TenantStorefrontProps) {
   const { slug } = await params;
 
-  // 1. ISABAY SA PAGHATAK ANG MGA PROMO TABLES BASE SA REAL SCHEMA MO
+  // 1. ISABAY SA PAGHATAK ANG MGA PROMO TABLES AT MARKETING CAMPAIGNS MULA SA DATABASE
   const storeData = await prisma.store.findUnique({
     where: { slug: slug },
     include: {
@@ -32,10 +30,10 @@ export default async function TenantStorefrontPage({ params }: TenantStorefrontP
       },
       vouchers: {
         where: {
-          isActive: true 
+          isActive: true // Lumalabas lang sa storefront ang mga naka-activate na voucher sa dashboard
         }
       },
-      campaigns: true 
+      campaigns: true // Hinahatak ang mga Flash Sales, 3-Day Sales, BOGO, at Package Bundles
     }
   });
 
@@ -43,11 +41,12 @@ export default async function TenantStorefrontPage({ params }: TenantStorefrontP
     return notFound();
   }
 
-  // ✅ OVERRIDE TYPE BLOCK: Sinasabihan ang TypeScript na ligtas basahin ang mga properties
-  const store = storeData as any;
+  // 2. SERIALIZATION LAYER: Ginagawang plain objects ang buong tugon ng database
+  // para mapatay ang "Decimal objects are not supported" crash boundary ng Next.js
+  const serializedStore = JSON.parse(JSON.stringify(storeData));
 
-  // 2. CONVERT DECIMAL TO NUMBER PARA SA MGA PRODUKTO AT VARIANTS
-  const sanitizedProducts = store.products?.map((product: any) => ({
+  // 3. PRODUCT & VARIANT PROCESSING
+  const sanitizedProducts = serializedStore.products?.map((product: any) => ({
     ...product,
     variants: product.variants?.map((variant: any) => ({
       ...variant,
@@ -55,71 +54,86 @@ export default async function TenantStorefrontPage({ params }: TenantStorefrontP
     })) || [],
   })) || [];
 
-  // 3. SANITIZE VOUCHERS: Ginagawang Numbers ang Decimal fields (discountValue, minSpend)
-  const sanitizedVouchers = (store.vouchers || []).map((voucher: any) => ({
-    ...voucher,
-    discountValue: voucher.discountValue ? Number(voucher.discountValue) : 0,
-    minSpend: voucher.minSpend ? Number(voucher.minSpend) : undefined,
-  }));
+  // 4. VOUCHER MAPPING & LOWERCASE CONVERSION (Para tanggapin ng interface ng MarketingSidebar)
+  const sanitizedVouchers = (serializedStore.vouchers || []).map((voucher: any) => {
+    // Kinoconvert ang "PERCENTAGE" -> "percentage" at "FIXED" -> "fixed" para pumasok sa logic ng sidebar
+    const rawType = String(voucher.discountType || "").toLowerCase();
+    const cleanType = rawType === "percentage" ? "percentage" : "fixed";
 
-  // 4. JAVASCRIPT-SIDE PROMO FILTER MANAGEMENT (Safe and Stable)
-  const allCampaigns = store.campaigns || [];
+    return {
+      ...voucher,
+      discountType: cleanType,
+      discountValue: voucher.discountValue ? Number(voucher.discountValue) : 0,
+      minSpend: voucher.minSpend ? Number(voucher.minSpend) : undefined,
+    };
+  });
 
-  // Sinasala ang marketing array campaigns gamit ang text string types
-  const activeFlashSales = allCampaigns.filter((c: any) => c.type === 'flash_sale' || c.campaignType === 'flash_sale');
-  const activeBundles = allCampaigns.filter((c: any) => c.type === 'bundle' || c.campaignType === 'bundle');
+  // 5. CAMPAIGNS FILTER MATRIX (Tugma sa FlashSale at Bundle Management Tabs)
+  const allCampaigns = serializedStore.campaigns || [];
 
-  // 5. I-UPDATE ANG BUONG `store` OBJECT PARA TULUYANG MALINIS MULA SA DECIMAL OBJECTS
-  // Ito ay para siguradong ligtas kapag ipinasa ang `store` object sa kahit anong Client Component
-  const sanitizedStore = {
-    ...store,
-    products: sanitizedProducts,
-    vouchers: sanitizedVouchers,
-    campaigns: JSON.parse(JSON.stringify(allCampaigns)) // Siguradong plain objects din ang mga campaigns
-  };
+  // Sinasala ang mga campaigns na hindi pa tapos (Active at Upcoming)
+  const upcomingOrActiveCampaigns = allCampaigns.filter(
+    (c: any) => c.status === "ACTIVE" || c.status === "UPCOMING"
+  );
+
+  // ⚡ FLASH SALES DISCOVERY LAYER: I-map ang `endDate` patungong `endTime` para sa countdown timer component
+  const activeFlashSales = upcomingOrActiveCampaigns
+    .filter((c: any) => c.type === 'FLASH_SALE' || c.type === 'THREE_DAY_SALE')
+    .map((c: any) => ({
+      ...c,
+      endTime: c.endDate, 
+      discountValue: c.discountValue || 0, 
+      discountType: String(c.discountType || 'PERCENTAGE').toLowerCase() === 'fixed' ? 'fixed' : 'percentage'
+    }));
+
+  // 📦 BUNDLES & BOGO DISCOVERY LAYER
+  const activeBundles = upcomingOrActiveCampaigns.filter(
+    (c: any) => c.type === 'BUNDLE' || c.type === 'BUY_1_TAKE_1'
+  );
+
+  // Inia-align ang pinal na memory payload ng store bago ipamahagi sa mga sub-components
+  serializedStore.products = sanitizedProducts;
+  serializedStore.vouchers = sanitizedVouchers;
 
   return (
-    <div className={`min-h-screen ${sanitizedStore.backgroundPreset}`}>
+    <div className={`min-h-screen ${serializedStore.backgroundPreset}`}>
       {/* ZONE 1: ASYMMETRICAL HEADER COVER */}
-      <StorefrontHeader store={sanitizedStore} />
+      <StorefrontHeader store={serializedStore} />
 
       <main className="max-w-7xl mx-auto px-6 md:px-12 pt-8 space-y-6">
         {/* TRUST ACCENTS WIDGET */}
         <StorePerks />
 
-        {/* ========================================================================= */}
-        {/* [MARKETING ZONE]: FLASH SALE TICKING BANNER CHUB */}
-        {/* ========================================================================= */}
+        {/* [MARKETING ZONE]: Dynamic Flash & 3-Day Sales Banner Tracker */}
         {activeFlashSales.length > 0 && (
-          <FlashSaleBanner flashSales={activeFlashSales} themeColor={sanitizedStore.themeColor} />
+          <FlashSaleBanner flashSales={activeFlashSales} themeColor={serializedStore.themeColor} />
         )}
 
         {/* ZONE 2: SEARCH DISCOVERY ENTRY */}
-        <SearchDiscoveryBar storeName={sanitizedStore.name} productCount={sanitizedProducts.length} />
+        <SearchDiscoveryBar storeName={serializedStore.name} productCount={sanitizedProducts.length} />
 
         {/* TWO-COLUMN CONTENT GRID SECTOR */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
           
-          {/* ZONE 3: PRODUCT GRID (Kaliwang Bahagi) */}
+          {/* ZONE 3: PRODUCT GRID (Awtomatikong kumakarga ng BOGO at Package Bundles sa UI ng mamimili) */}
           <div className="lg:col-span-3">
             <ProductGrid 
               products={sanitizedProducts} 
-              themeColor={sanitizedStore.themeColor} 
+              themeColor={serializedStore.themeColor} 
               bundles={activeBundles} 
             />
           </div>
 
-          {/* ZONE 4: MARKETING SIDEBAR (Kanang Sticky Column) */}
+          {/* ZONE 4: MARKETING SIDEBAR (Awtomatikong nagpapakita ng mga Claimable Vouchers) */}
           <aside className="lg:col-span-1 lg:sticky lg:top-6">
-            {/* ✅ FIXED: Malinis na at purong numbers/plain objects na ang ipinapasa rito */}
-            <MarketingSidebar store={sanitizedStore} vouchers={sanitizedVouchers} />
+            <MarketingSidebar store={serializedStore} vouchers={sanitizedVouchers} />
           </aside>
           
         </div>
       </main>
 
       {/* FOOTER MATRIX */}
-      <StorefrontFooter storeName={sanitizedStore.name} />
+      <StorefrontFooter storeName={serializedStore.name} />
     </div>
   );
 }

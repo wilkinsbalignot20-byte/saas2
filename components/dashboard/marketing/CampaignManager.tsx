@@ -1,6 +1,7 @@
  // components/dashboard/marketing/CampaignManager.tsx
 "use client";
 
+import CampaignProductSelector, { type SelectedRulePayload } from "./CampaignProductSelector";
 import { useId, useMemo, useState, type ReactNode } from "react";
 import { Plus, Search, X, Rocket, CalendarClock, type LucideIcon } from "lucide-react";
 import {
@@ -88,7 +89,7 @@ export default function CampaignManager({
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<{ kind: "success" | "error"; text: string } | null>(null);
-
+  const [selectedProductRules, setSelectedProductRules] = useState<SelectedRulePayload[]>([]);
   // Form
   const [name, setName] = useState("");
   const [type, setType] = useState(types[0].value);
@@ -161,6 +162,7 @@ export default function CampaignManager({
     setEnd("");
     setEndTouched(false);
     setSubmitted(false);
+    setSelectedProductRules([]);
   };
 
   const closeForm = () => {
@@ -181,6 +183,7 @@ export default function CampaignManager({
         type,
         startDate: new Date(start).toISOString(),
         endDate: new Date(end).toISOString(),
+        rules: selectedProductRules,
       });
       setData([created, ...data]);
       setNotice({ kind: "success", text: `"${created.name}" has been published.` });
@@ -332,7 +335,15 @@ export default function CampaignManager({
               </button>
             ))}
           </div>
+          {/* 🌟 BAGONG PRODUKTO CHECKLIST SELECTOR MODAL TRIGGER LAYER */}
+          <div className="pt-2">
+            <CampaignProductSelector 
+              tenantSlug={tenantSlug} 
+              onChange={setSelectedProductRules} 
+            />
+          </div>
 
+          {/* MGA ACTION BUTTONS NG FORM */}
           <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             <button type="button" onClick={closeForm} className={btnSecondary}>
               Cancel
@@ -455,3 +466,4 @@ export default function CampaignManager({
     </Panel>
   );
 }
+
