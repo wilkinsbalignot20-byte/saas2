@@ -1,6 +1,18 @@
  // app/shop/[slug]/page.tsx
+
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
+
+// MGA KASALUKUYANG IMPORTS MO
+import StorefrontHeader from '@/components/marketplace/shop/StorefrontHeader';
+import SearchDiscoveryBar from '@/components/marketplace/shop/SearchDiscoveryBar';
+import ProductGrid from '@/components/marketplace/shop/ProductGrid';
+import MarketingSidebar from '@/components/marketplace/shop/MarketingSidebar';
+import StorePerks from '@/components/marketplace/shop/StorePerks';
+import StorefrontFooter from '@/components/marketplace/shop/StorefrontFooter';
+
+// FLASH SALE COMPONENT IMPORT
+import FlashSaleBanner from '@/components/marketplace/shop/marketing/FlashSaleBanner';
 
 interface TenantStorefrontProps {
   params: Promise<{ slug: string }>;
@@ -9,98 +21,105 @@ interface TenantStorefrontProps {
 export default async function TenantStorefrontPage({ params }: TenantStorefrontProps) {
   const { slug } = await params;
 
-// app/shop/[slug]/page.tsx
-
-const store = await prisma.store.findUnique({
-  where: { slug: slug },
-  include: {
-    products: {
-      // TINANGGAL NATIN ANG WHERE STATUS FILTER PARA LUMABAS KAHIT DRAFT O PUBLISHED!
-      include: {
-        variants: true
-      }
+  // 1. ISABAY SA PAGHATAK ANG MGA PROMO TABLES BASE SA REAL SCHEMA MO
+  const storeData = await prisma.store.findUnique({
+    where: { slug: slug },
+    include: {
+      products: {
+        include: {
+          variants: true
+        }
+      },
+      vouchers: {
+        where: {
+          isActive: true 
+        }
+      },
+      campaigns: true 
     }
-  }
-});
+  });
 
-  // 2. Kung walang tindahan, mag-404 error
-  if (!store || store.status !== 'active') {
+  if (!storeData || storeData.status !== 'active') {
     return notFound();
   }
 
+  // ✅ OVERRIDE TYPE BLOCK: Sinasabihan ang TypeScript na ligtas basahin ang mga properties
+  const store = storeData as any;
+
+  // 2. CONVERT DECIMAL TO NUMBER PARA SA MGA PRODUKTO AT VARIANTS
+  const sanitizedProducts = store.products?.map((product: any) => ({
+    ...product,
+    variants: product.variants?.map((variant: any) => ({
+      ...variant,
+      price: variant.price ? Number(variant.price) : 0, 
+    })) || [],
+  })) || [];
+
+  // 3. SANITIZE VOUCHERS: Ginagawang Numbers ang Decimal fields (discountValue, minSpend)
+  const sanitizedVouchers = (store.vouchers || []).map((voucher: any) => ({
+    ...voucher,
+    discountValue: voucher.discountValue ? Number(voucher.discountValue) : 0,
+    minSpend: voucher.minSpend ? Number(voucher.minSpend) : undefined,
+  }));
+
+  // 4. JAVASCRIPT-SIDE PROMO FILTER MANAGEMENT (Safe and Stable)
+  const allCampaigns = store.campaigns || [];
+
+  // Sinasala ang marketing array campaigns gamit ang text string types
+  const activeFlashSales = allCampaigns.filter((c: any) => c.type === 'flash_sale' || c.campaignType === 'flash_sale');
+  const activeBundles = allCampaigns.filter((c: any) => c.type === 'bundle' || c.campaignType === 'bundle');
+
+  // 5. I-UPDATE ANG BUONG `store` OBJECT PARA TULUYANG MALINIS MULA SA DECIMAL OBJECTS
+  // Ito ay para siguradong ligtas kapag ipinasa ang `store` object sa kahit anong Client Component
+  const sanitizedStore = {
+    ...store,
+    products: sanitizedProducts,
+    vouchers: sanitizedVouchers,
+    campaigns: JSON.parse(JSON.stringify(allCampaigns)) // Siguradong plain objects din ang mga campaigns
+  };
+
   return (
-    <div className={`min-h-screen transition-all duration-300 ${store.backgroundPreset}`}>
-      
-      {/* FRONT STORE BRANDING HEADER */}
-      <header className="w-full p-10 text-center border-b border-[#1B211D]/5" style={{ backgroundColor: store.themeColor }}>
-        <div className="max-w-4xl mx-auto space-y-3">
-          {store.logoUrl ? (
-            <img src={store.logoUrl} alt={store.name} className="h-20 w-20 mx-auto rounded-full object-cover border-2 border-white shadow-xs" />
-          ) : (
-            <div className="h-16 w-16 mx-auto rounded-full bg-white/20 flex items-center justify-center font-bold text-white text-lg">
-              {store.name.substring(0, 2).toUpperCase()}
-            </div>
-          )}
-          <h1 className="text-3xl font-extrabold text-white tracking-tight">{store.name}</h1>
-          <p className="text-white/80 text-xs font-medium uppercase tracking-widest">Official Storefront</p>
-        </div>
-      </header>
+    <div className={`min-h-screen ${sanitizedStore.backgroundPreset}`}>
+      {/* ZONE 1: ASYMMETRICAL HEADER COVER */}
+      <StorefrontHeader store={sanitizedStore} />
 
-      {/* PRODUCT CATALOG CONTAINER */}
-      <main className="max-w-6xl mx-auto p-8 md:p-12 space-y-8">
-        <h2 className="text-sm font-bold text-[#1B211D]/60 uppercase tracking-wider border-b border-[#1B211D]/5 pb-4">
-          Our Products
-        </h2>
+      <main className="max-w-7xl mx-auto px-6 md:px-12 pt-8 space-y-6">
+        {/* TRUST ACCENTS WIDGET */}
+        <StorePerks />
 
-        {store.products.length === 0 ? (
-          <div className="text-center py-16 bg-white/40 backdrop-blur-md rounded-2xl border border-[#1B211D]/5">
-            <p className="text-sm text-[#1B211D]/40 font-medium">This store hasn&apos;t published any products yet.</p>
-            <p className="text-[11px] text-rose-500 mt-2 font-mono bg-rose-50 p-2 inline-block rounded-md border border-rose-100">
-              💡 Tip: I-check kung ang store_id ng produkto mo sa Supabase ay nakaturo sa id na kasunod ng manipu.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-            {store.products.map((product: any) => {
-              // LIGTAS NA PAGKUHA NG PRESYO MULA SA ARRAY NG VARIANTS
-              const hasVariants = product.variants && product.variants.length > 0;
-              const displayPrice = hasVariants ? Number(product.variants[0].price) : 0;
-
-              // LIGTAS NA PAGKUHA NG LARAWAN MULA SA ARRAY NG IMAGES
-              const hasImages = product.images && product.images.length > 0;
-              const displayImage = hasImages ? product.images[0] : null;
-
-              return (
-                <div key={product.id} className="bg-white/80 backdrop-blur-md rounded-2xl border border-[#1B211D]/5 p-5 shadow-2xs flex flex-col justify-between hover:translate-y-[-2px] transition-all">
-                  <div className="space-y-4">
-                    <div className="bg-[#F6F5F1] w-full h-44 rounded-xl overflow-hidden relative border border-[#1B211D]/5">
-                      {displayImage ? (
-                        <img src={displayImage} alt={product.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-xs text-[#1B211D]/30 font-medium">
-                          No Image Uploaded
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="space-y-1">
-                      <h3 className="font-bold text-base text-[#1B211D] tracking-tight">{product.name}</h3>
-                      {product.description && <p className="text-xs text-[#1B211D]/50 line-clamp-2">{product.description}</p>}
-                    </div>
-                  </div>
-
-                  <div className="pt-4 mt-4 border-t border-[#1B211D]/5 flex items-center justify-between">
-                    <span className="text-xs font-semibold text-[#1B211D]/40">Price Starts At</span>
-                    <span className="text-base font-extrabold text-[#1B211D]">
-                      ₱{displayPrice.toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+        {/* ========================================================================= */}
+        {/* [MARKETING ZONE]: FLASH SALE TICKING BANNER CHUB */}
+        {/* ========================================================================= */}
+        {activeFlashSales.length > 0 && (
+          <FlashSaleBanner flashSales={activeFlashSales} themeColor={sanitizedStore.themeColor} />
         )}
+
+        {/* ZONE 2: SEARCH DISCOVERY ENTRY */}
+        <SearchDiscoveryBar storeName={sanitizedStore.name} productCount={sanitizedProducts.length} />
+
+        {/* TWO-COLUMN CONTENT GRID SECTOR */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
+          
+          {/* ZONE 3: PRODUCT GRID (Kaliwang Bahagi) */}
+          <div className="lg:col-span-3">
+            <ProductGrid 
+              products={sanitizedProducts} 
+              themeColor={sanitizedStore.themeColor} 
+              bundles={activeBundles} 
+            />
+          </div>
+
+          {/* ZONE 4: MARKETING SIDEBAR (Kanang Sticky Column) */}
+          <aside className="lg:col-span-1 lg:sticky lg:top-6">
+            {/* ✅ FIXED: Malinis na at purong numbers/plain objects na ang ipinapasa rito */}
+            <MarketingSidebar store={sanitizedStore} vouchers={sanitizedVouchers} />
+          </aside>
+          
+        </div>
       </main>
+
+      {/* FOOTER MATRIX */}
+      <StorefrontFooter storeName={sanitizedStore.name} />
     </div>
   );
 }

@@ -1,18 +1,17 @@
-// app/api/stores/[slug]/design/route.ts
+ // app/api/stores/[slug]/design/route.ts
 
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { createClient } from '@/lib/supabase/server'; // Ginagamit ang iyong SSR server client para sa proteksyon
+import { createClient } from '@/lib/supabase/server'; 
 
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    // 1. Kunin ang active store slug mula sa URL parameters
     const { slug } = await params;
 
-    // 2. MULTI-TENANT SECURITY GATE: I-verify kung ang kasalukuyang user ang totoong owner ng shop
+    // 1. MULTI-TENANT SECURITY GATE
     const supabase = await createClient();
     const { data: { session } } = await supabase.auth.getSession();
 
@@ -23,7 +22,6 @@ export async function PATCH(
       );
     }
 
-    // Hanapin ang store profile gamit ang slug
     const store = await prisma.store.findUnique({
       where: { slug: slug },
       select: { id: true, ownerId: true }
@@ -36,7 +34,6 @@ export async function PATCH(
       );
     }
 
-    // Siguraduhing ang ownerId sa database ay katugma ng naka-log in na user sa session
     if (store.ownerId !== session.user.id) {
       return NextResponse.json(
         { error: 'Security Breach: You do not own this storefront workspace.' },
@@ -44,11 +41,18 @@ export async function PATCH(
       );
     }
 
-    // 3. READ THE PAYLOAD VALUES FROM FRONT-END
+    // 2. BASAHIN ANG MGA BAGONG PAYLOAD VALUES MULA SA DASHBOARD FORM
     const body = await request.json();
-    const { themeColor, backgroundPreset, logoUrl } = body;
+    const { 
+      themeColor, 
+      backgroundPreset, 
+      logoUrl, 
+      bannerUrl,       // ➔ Bagong salta galing Cloudinary
+      promoVideoUrl,   // ➔ Bagong salta galing Cloudinary video
+      promoText        // ➔ Bagong salta para sa voucher codes text
+    } = body;
 
-    // Masusing pagsusuri sa Hex Color Code Format bago i-save (Dapat may # sa unahan)
+    // Hex Color Validation
     if (themeColor && !/^#[0-9A-Fa-f]{6}$/.test(themeColor)) {
       return NextResponse.json(
         { error: 'Invalid color hex format provided.' },
@@ -56,13 +60,16 @@ export async function PATCH(
       );
     }
 
-    // 4. DATABASE TRANSACTION LAYER: UPDATE STORE DESIGN SETTINGS
+    // 3. DATABASE UPDATE LAYER (Isinama na ang tatlong bagong market columns)
     const updatedStore = await prisma.store.update({
       where: { id: store.id },
       data: {
         themeColor: themeColor || '#E8A33D',
         backgroundPreset: backgroundPreset || 'bg-slate-50',
-        logoUrl: logoUrl || null
+        logoUrl: logoUrl || null,
+        bannerUrl: bannerUrl || null,             // ➔ I-save sa Prisma
+        promoVideoUrl: promoVideoUrl || null,     // ➔ I-save sa Prisma
+        promoText: promoText || null              // ➔ I-save sa Prisma
       }
     });
 

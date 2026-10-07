@@ -50,6 +50,9 @@ model Store {
 
   slackWebhookUrl    String?  @map("slack_webhook_url") @db.Text
   viberBotToken      String?  @map("viber_bot_token") @db.Text
+  bannerUrl        String? @map("banner_url") @db.Text
+  promoVideoUrl    String? @map("promo_video_url") @db.Text
+  promoText        String? @map("promo_text") @db.Text
 
 
 
