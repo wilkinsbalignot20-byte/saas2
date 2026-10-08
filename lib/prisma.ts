@@ -2,19 +2,27 @@
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 
-// Lumikha ng pg connection pool gamit ang iyong Supabase DATABASE_URL
-const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-const adapter = new PrismaPg(pool);
-
+// I-extend ang globalThis para isama ang pool at adapter bukod sa prisma client instance
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
+  pool: Pool | undefined;
+  adapter: PrismaPg | undefined;
 };
+
+// 🛡️ SINGLETON PATTERN PARA SA POOL: Gumawa lang kung wala pa sa global memory cache
+const pool = globalForPrisma.pool ?? new Pool({ connectionString: process.env.DATABASE_URL });
+const adapter = globalForPrisma.adapter ?? new PrismaPg(pool);
 
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
-    adapter: adapter, // <--- ITO ANG KULANG NA NAGPAPALABAS NG ERROR
+    adapter: adapter,
     log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
   });
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+// I-save sa global object para hindi ma-recreate tuwing Next.js fast-refresh hot reload
+if (process.env.NODE_ENV !== "production") {
+  globalForPrisma.pool = pool;
+  globalForPrisma.adapter = adapter;
+  globalForPrisma.prisma = prisma;
+}

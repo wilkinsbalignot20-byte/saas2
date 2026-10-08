@@ -3,6 +3,9 @@
 
 import CampaignProductSelector, { type SelectedRulePayload } from "./CampaignProductSelector";
 import { useId, useMemo, useState, type ReactNode } from "react";
+import { CldUploadWidget } from 'next-cloudinary';
+import { ImagePlus, Trash2 } from 'lucide-react'; // Siguraduhing may Trash2 ka sa lucide-react imports
+
 import { Plus, Search, X, Rocket, CalendarClock, type LucideIcon } from "lucide-react";
 import {
   Panel,
@@ -84,6 +87,7 @@ export default function CampaignManager({
 }: CampaignManagerProps) {
   const baseUrl = `/api/stores/${tenantSlug}/marketing/campaigns`;
   const { data, setData, loading, error: loadError, reload } = useList<Campaign>(`${baseUrl}${listQuery}`);
+  const [bundleImage, setBundleImage] = useState("");
 
   const uid = useId();
   const [showForm, setShowForm] = useState(false);
@@ -163,6 +167,7 @@ export default function CampaignManager({
     setEndTouched(false);
     setSubmitted(false);
     setSelectedProductRules([]);
+    setBundleImage("");
   };
 
   const closeForm = () => {
@@ -178,15 +183,22 @@ export default function CampaignManager({
     setSaving(true);
     setNotice(null);
     try {
+
+      const finalName = type === "BUNDLE" && bundleImage 
+        ? `${name.trim()}||IMAGE||${bundleImage}` 
+        : name.trim();
+
       const created = await sendJson<Campaign>(baseUrl, "POST", {
-        name: name.trim(),
+        name: finalName,
         type,
         startDate: new Date(start).toISOString(),
         endDate: new Date(end).toISOString(),
         rules: selectedProductRules,
       });
+
+      const [cleanName] = created.name.split("||IMAGE||");
       setData([created, ...data]);
-      setNotice({ kind: "success", text: `"${created.name}" has been published.` });
+      setNotice({ kind: "success", text: `"${cleanName}" has been published.` });
       closeForm();
     } catch (err: any) {
       setNotice({ kind: "error", text: err.message });
@@ -245,55 +257,100 @@ export default function CampaignManager({
           </Notice>
         </div>
       )}
+           {/* CREATE FORM */}
+          {showForm && (
+            <form onSubmit={handleSave} noValidate className="space-y-5 border-b border-slate-200 bg-slate-50/70 p-5 sm:p-6">
+              <div className="grid gap-5 lg:grid-cols-2">
+                <Field id={`${uid}-name`} label="Campaign name" error={showErr(errors.name)}>
+                  <input
+                    id={`${uid}-name`}
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={namePlaceholder}
+                    className={inputClass}
+                    autoFocus
+                  />
+                </Field>
 
-      {/* CREATE FORM */}
-      {showForm && (
-        <form onSubmit={handleSave} noValidate className="space-y-5 border-b border-slate-200 bg-slate-50/70 p-5 sm:p-6">
-          <div className="grid gap-5 lg:grid-cols-2">
-            <Field id={`${uid}-name`} label="Campaign name" error={showErr(errors.name)}>
-              <input
-                id={`${uid}-name`}
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder={namePlaceholder}
-                className={inputClass}
-                autoFocus
-              />
-            </Field>
+                {/* 🛡️ CLOUDINARY BUNDLE COVER BANNER DROPZONE TRIGGER LAYER */}
+                {type === "BUNDLE" && (
+                  <div className="space-y-1.5 lg:col-span-2 animate-in fade-in slide-in-from-top-1 duration-150">
+                    <span className="block text-sm font-medium text-slate-700">Bundle Promotional Image</span>
+                    {bundleImage ? (
+                      <div className="relative w-full h-28 rounded-xl overflow-hidden border border-slate-200 bg-slate-100 max-w-xl">
+                        <img src={bundleImage} alt="Bundle Promo Banner" className="w-full h-full object-cover" />
+                        <button
+                          type="button"
+                          onClick={() => setBundleImage('')}
+                          className="absolute top-2 right-2 p-1.5 bg-rose-500 text-white rounded-md hover:bg-rose-600 transition-colors shadow-xs cursor-pointer"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
+                    ) : (
+                      <CldUploadWidget
+                        signatureEndpoint="/api/sign-cloudinary"
+                        options={{
+                          maxFiles: 1,
+                          folder: 'storefront',
+                          clientAllowedFormats: ['png', 'jpeg', 'webp'],
+                        }}
+                        onSuccess={(result) => {
+                          if (result?.info && typeof result.info !== 'string') {
+                            const url = result.info.secure_url;
+                            if (url) setBundleImage(url);
+                          }
+                        }}
+                      >
+                        {({ open }) => (
+                          <button
+                            type="button"
+                            onClick={() => open()}
+                            className="w-full h-24 flex flex-col items-center justify-center border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:bg-slate-50 transition bg-white gap-1 max-w-xl shadow-2xs"
+                          >
+                            <ImagePlus size={18} className="text-slate-400" />
+                            <span className="text-[11px] text-slate-400 font-semibold">Upload Bundle Display Cover</span>
+                          </button>
+                        )}
+                      </CldUploadWidget>
+                    )}
+                  </div>
+                )}
 
-            <div className="space-y-1.5">
-              <span className="block text-sm font-medium text-slate-700" id={`${uid}-type`}>
-                Promo type
-              </span>
-              <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-labelledby={`${uid}-type`}>
-                {types.map((t) => {
-                  const active = type === t.value;
-                  const Icon = t.icon;
-                  return (
-                    <button
-                      key={t.value}
-                      type="button"
-                      role="radio"
-                      aria-checked={active}
-                      onClick={() => handleTypeChange(t.value)}
-                      className={`flex items-start gap-3 rounded-lg border bg-white p-3 text-left transition ${
-                        active
-                          ? "border-[var(--brand,#0f172a)] ring-2 ring-[var(--brand,#0f172a)]/15"
-                          : "border-slate-200 hover:border-slate-300"
-                      }`}
-                    >
-                      <Icon size={18} className="mt-0.5 shrink-0 text-slate-600" />
-                      <span>
-                        <span className="block text-sm font-semibold text-slate-900">{t.label}</span>
-                        <span className="block text-xs text-slate-500">{t.description}</span>
-                      </span>
-                    </button>
-                  );
-                })}
+                <div className="space-y-1.5">
+                  <span className="block text-sm font-medium text-slate-700" id={`${uid}-type`}>
+                    Promo type
+                  </span>
+                  <div className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-labelledby={`${uid}-type`}>
+                    {types.map((t) => {
+                      const active = type === t.value;
+                      const Icon = t.icon;
+                      return (
+                        <button
+                          key={t.value}
+                          type="button"
+                          role="radio"
+                          aria-checked={active}
+                          onClick={() => handleTypeChange(t.value)}
+                          className={`flex items-start gap-3 rounded-lg border bg-white p-3 text-left transition ${
+                            active
+                              ? "border-[var(--brand,#0f172a)] ring-2 ring-[var(--brand,#0f172a)]/15"
+                              : "border-slate-200 hover:border-slate-300"
+                          }`}
+                        >
+                          <Icon size={18} className="mt-0.5 shrink-0 text-slate-600" />
+                          <span>
+                            <span className="block text-sm font-semibold text-slate-900">{t.label}</span>
+                            <span className="block text-xs text-slate-500">{t.description}</span>
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
+
 
           <div className="grid gap-5 sm:grid-cols-2">
             <Field id={`${uid}-start`} label="Starts" error={showErr(errors.start)}>
@@ -337,8 +394,9 @@ export default function CampaignManager({
           </div>
           {/* 🌟 BAGONG PRODUKTO CHECKLIST SELECTOR MODAL TRIGGER LAYER */}
           <div className="pt-2">
-            <CampaignProductSelector 
+            <CampaignProductSelector
               tenantSlug={tenantSlug} 
+              campaignType={type}
               onChange={setSelectedProductRules} 
             />
           </div>
@@ -422,14 +480,28 @@ export default function CampaignManager({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {visible.map((c) => {
+               {visible.map((c) => {
                 const t = typeMap[c.type];
                 const b = bucket(c.status);
+                
+                // Matalinong paghihiwalay ng Pangalan at Larawan para magamit sa buong row block
+                const [cleanName, imageUrl] = c.name.split("||IMAGE||");
+
                 return (
                   <tr key={c.id} className="transition-colors hover:bg-slate-50">
                     <td className="px-5 py-4 sm:px-6">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-semibold text-slate-900">{c.name}</span>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <div className="flex items-center gap-3">
+                          {imageUrl && (
+                            <img 
+                              src={imageUrl} 
+                              alt="Bundle Display Banner" 
+                              className="w-10 h-10 rounded-lg object-cover border border-slate-200 shrink-0" 
+                            />
+                          )}
+                          <span className="font-semibold text-slate-900">{cleanName}</span>
+                        </div>
+
                         {c.isPremiumBoosted && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/15">
                             <Rocket size={11} /> Boosted
@@ -437,24 +509,28 @@ export default function CampaignManager({
                         )}
                       </div>
                     </td>
+
                     <td className="whitespace-nowrap px-4 py-4">
                       <span className={`rounded-md px-2 py-1 text-xs font-semibold ${t?.pill ?? "bg-slate-100 text-slate-700"}`}>
                         {t?.label ?? c.type}
                       </span>
                     </td>
+
                     <td className="whitespace-nowrap px-4 py-4">
                       <div className="text-slate-700">
                         {fmtDateTime(c.startDate)} <span className="text-slate-400">to</span> {fmtDateTime(c.endDate)}
                       </div>
                       <div className="text-xs text-slate-500">{durationLabel(c.startDate, c.endDate)}</div>
                     </td>
+
                     <td className="whitespace-nowrap px-5 py-4 sm:px-6">
                       <StatusPill status={c.status} />
                       {b === "ACTIVE" && <div className="mt-1 text-xs text-slate-500">{endsIn(c.endDate)}</div>}
                       {b === "UPCOMING" && <div className="mt-1 text-xs text-slate-500">{startsIn(c.startDate)}</div>}
                     </td>
+
                     <td className="whitespace-nowrap px-5 py-4 text-right sm:px-6">
-                      <DeleteButton busy={busyId === c.id} label={`Delete ${c.name}`} onConfirm={() => removeCampaign(c)} />
+                      <DeleteButton busy={busyId === c.id} label={`Delete ${cleanName}`} onConfirm={() => removeCampaign(c)} />
                     </td>
                   </tr>
                 );
@@ -466,4 +542,5 @@ export default function CampaignManager({
     </Panel>
   );
 }
+
 

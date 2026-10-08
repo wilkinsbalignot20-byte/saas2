@@ -186,7 +186,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: 'Hindi nahanap ang tindahan.' }, { status: 404 });
     }
 
-    // Kunin ang mga published products ng store kasama ang taglay nitong variants at presyo
+    // Kunin ang mga published products ng store kasama ang taglay nitong variants, presyo, at active flash sale validation flags
     const products = await prisma.product.findMany({
       where: {
         storeId: store.id,
@@ -203,12 +203,48 @@ export async function GET(request: NextRequest, context: RouteContext) {
             price: true,
             sku: true
           }
+        },
+        // 🛡️ NO PROMO STACKING: Hahanapin kung kasali ang produktong ito sa active/upcoming flash sales ng store
+        store: {
+          select: {
+            campaigns: {
+              where: {
+                status: { in: ["ACTIVE", "UPCOMING"] },
+                type: "FLASH_SALE"
+              },
+              select: {
+                rules: {
+                  select: {
+                    productId: true,
+                    variantId: true
+                  }
+                }
+              }
+            }
+          }
         }
       },
       orderBy: { createdAt: 'desc' }
     });
+    const productsWithPromoFlags = products.map((p) => {
+      // 🛡️ MAS PINALAWAK NA HARANG: Hulihin ang promo kahit sa product level o variant level naka-save
+      const isInFlashSale = p.store?.campaigns?.some((c) => 
+        c.rules?.some((r) => 
+          r.productId === p.id || 
+          p.variants.some((v) => v.id === r.variantId)
+        )
+      ) || false;
 
-    return NextResponse.json(products);
+      return {
+        id: p.id,
+        name: p.name,
+        images: p.images,
+        variants: p.variants,
+        isLockedInFlashSale: isInFlashSale 
+      };
+    });
+    
+    return NextResponse.json(productsWithPromoFlags);
   } catch (error) {
     console.error('BACK-END PRODUCTS GET ERROR:', error);
     return NextResponse.json({ error: 'Internal server query error occurred.' }, { status: 500 });
