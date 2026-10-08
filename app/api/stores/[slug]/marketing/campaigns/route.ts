@@ -136,3 +136,45 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     return NextResponse.json({ error: "Hindi ma-update ang premium ad boost status." }, { status: 500 });
   }
 }
+
+// ⚡ 4. DELETE METHOD: Para burahin ang campaign gamit ang URL query parameter (?id=CAMPAIGN_ID)
+export async function DELETE(req: NextRequest, context: RouteContext) {
+  try {
+    const { slug } = await context.params;
+    const { searchParams } = new URL(req.url);
+    const campaignId = searchParams.get("id");
+
+    if (!campaignId) {
+      return NextResponse.json({ error: "Kulang ang Campaign ID." }, { status: 400 });
+    }
+
+    // Siguraduhin muna natin na ang tindahan ay may-ari talaga ng buburahing campaign
+    const store = await prisma.store.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+
+    if (!store) {
+      return NextResponse.json({ error: "Hindi nahanap ang tindahan." }, { status: 404 });
+    }
+
+    // 🌟 MAHALAGA: Kung may cascade delete ang Prisma schema mo para sa CampaignRules, sapat na ito.
+    // Kung walang cascade delete sa schema, kailangan muna nating burahin nang manu-mano ang mga rules:
+    await prisma.campaignRule.deleteMany({
+      where: { campaignId: campaignId }
+    });
+
+    // Pagbura sa mismong campaign record
+    const deletedCampaign = await prisma.campaign.delete({
+      where: {
+        id: campaignId,
+        storeId: store.id,
+      },
+    });
+
+    return NextResponse.json({ success: true, message: "Matagumpay na nabura ang campaign.", deletedCampaign });
+  } catch (error) {
+    console.error("Campaign DELETE Error:", error);
+    return NextResponse.json({ error: "Hindi ma-delete ang campaign." }, { status: 500 });
+  }
+}
