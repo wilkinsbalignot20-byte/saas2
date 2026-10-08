@@ -108,6 +108,48 @@ export default async function TenantStorefrontPage({ params }: TenantStorefrontP
           <FlashSaleBanner flashSales={activeFlashSales} themeColor={serializedStore.themeColor} />
         )}
 
+        {/* 🛡️ MARKETPLACE ADD-ON LAYOUT: Eksklusibong Combo Pack display para sa Package Bundles */}
+        {activeBundles.filter((b: any) => b.type === 'BUNDLE').length > 0 && (
+          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-4">
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-bold text-slate-900 tracking-tight">🔥 Featured Bundle Combo Packs</span>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {activeBundles
+                .filter((b: any) => b.type === 'BUNDLE')
+                .map((bundle: any) => {
+                  // Matalinong paghihiwalay sa delimiter ng Cloudinary image at malinis na pangalan
+                  const [cleanName, imageUrl] = bundle.name.split("||IMAGE||");
+                  return (
+                    <div key={bundle.id} className="flex flex-col sm:flex-row gap-4 border border-slate-100 bg-slate-50/50 rounded-xl p-4 transition hover:shadow-xs group">
+                      {imageUrl && (
+                        <div className="w-full sm:w-32 h-24 rounded-lg overflow-hidden shrink-0 border border-slate-200">
+                          <img src={imageUrl} alt={cleanName} className="w-full h-full object-cover group-hover:scale-105 transition duration-200" />
+                        </div>
+                      )}
+                      <div className="flex flex-col justify-between flex-1 space-y-2">
+                        <div className="space-y-1">
+                          <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-700/10 w-fit">
+                            Package Bundle Deal
+                          </span>
+                          <h4 className="text-sm font-bold text-slate-900 leading-tight">{cleanName}</h4>
+                          <p className="text-xs text-slate-400">Bumili ng set para sa mas malaking bawas-presyo!</p>
+                        </div>
+                        <button
+                          type="button"
+                          style={{ backgroundColor: serializedStore.themeColor }}
+                          className="w-full sm:w-fit px-3 py-1.5 rounded-lg text-white font-bold text-xs shadow-2xs hover:opacity-90 transition cursor-pointer"
+                        >
+                          View Combo Pack
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+        )}
+
         <SearchDiscoveryBar storeName={serializedStore.name} productCount={sanitizedProducts.length} />
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
@@ -117,7 +159,6 @@ export default async function TenantStorefrontPage({ params }: TenantStorefrontP
               products={sanitizedProducts} 
               themeColor={serializedStore.themeColor} 
               bundles={activeBundles} 
-              // 🌟 IPASA ANG LAHAT NG UPCOMING AT ACTIVE FLASH SALES (KASAMA ANG RULES)
               flashSales={upcomingOrActiveCampaigns.filter((c: any) => c.type === 'FLASH_SALE' || c.type === 'THREE_DAY_SALE')} 
             />
           </div>
@@ -133,3 +174,5 @@ export default async function TenantStorefrontPage({ params }: TenantStorefrontP
     </div>
   );
 }
+
+

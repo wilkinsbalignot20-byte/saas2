@@ -19,6 +19,8 @@ interface Product {
 interface BundleCampaign {
   id: string;
   name: string;
+  type: string;
+  rules?: any[];
   productId: string;
   bundleType: 'bogo' | 'combo' | 'package';
   promoLabel?: string;
@@ -48,11 +50,13 @@ export default function ProductGrid({ products, themeColor, bundles = [], flashS
         const originalPrice = hasVariants ? Number(product.variants[0].price) : 0;
         const displayImage = product.images && product.images.length > 0 ? product.images[0] : null;
 
-        const matchingBundle = bundles.find((b) => b.productId === product.id);
+        // 🛡️ MATALINONG BUNDLE & BOGO CHECKER: Mag-loop sa rules ng campaigns
+        const matchingBundle = bundles.find((campaign: any) => 
+          campaign.rules?.some((rule: any) => rule.productId === product.id)
+        );
+        // Alamin kung Buy 1 Take 1 o Package Bundle ang uri ng kampanya
+        const bundleType = matchingBundle?.type;
 
-        // =========================================================================
-        // ⚡ FLASH SALE DISCOUNT LOGIC
-        // =========================================================================
         let finalPrice = originalPrice;
         let hasDiscount = false;
         let discountLabel = '';
@@ -120,11 +124,14 @@ export default function ProductGrid({ products, themeColor, bundles = [], flashS
               {matchingBundle && (
                 <div className="absolute top-2 right-2 z-10 animate-in fade-in zoom-in-95 duration-200">
                   <span 
-                    className="text-[9px] font-black uppercase tracking-wider text-white px-2 py-1 rounded-md shadow-sm flex items-center gap-1 backdrop-blur-xs"
-                    style={{ backgroundColor: themeColor }}
+                    className={`text-[9px] font-black uppercase tracking-wider text-white px-2 py-1 rounded-md shadow-sm flex items-center gap-1 backdrop-blur-xs ${
+                      bundleType === "BUY_1_TAKE_1" 
+                        ? "bg-purple-600 ring-1 ring-purple-500/30" 
+                        : "bg-indigo-600 ring-1 ring-indigo-500/30"
+                    }`}
                   >
                     <ShoppingBag size={10} />
-                    {matchingBundle.promoLabel || (matchingBundle.bundleType === 'bogo' ? 'BUY 1 TAKE 1' : 'BUNDLE DEAL')}
+                    {bundleType === "BUY_1_TAKE_1" ? "BUY 1 TAKE 1" : "BUNDLE DEAL"}
                   </span>
                 </div>
               )}
@@ -139,9 +146,16 @@ export default function ProductGrid({ products, themeColor, bundles = [], flashS
 
               {/* ⚡ SLASH PRICE PRICE CONTAINER */}
               <div className="mt-auto pt-4 flex items-baseline justify-between gap-2">
-                <span className="text-xs text-[#1B211D]/45 shrink-0">
-                  {product.variants.length > 1 ? 'From' : 'Price'}
-                </span>
+                <div className="flex flex-col">
+                  <span className="text-xs text-[#1B211D]/45 shrink-0">
+                    {product.variants.length > 1 ? 'From' : 'Price'}
+                  </span>
+                  {bundleType === "BUY_1_TAKE_1" && (
+                    <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-1 rounded-md mt-0.5 w-fit">
+                      Get 2 items
+                    </span>
+                  )}
+                </div>
                 
                 <div className="flex flex-wrap items-baseline justify-end gap-x-2">
                   {hasDiscount && (
