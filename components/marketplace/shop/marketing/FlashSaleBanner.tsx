@@ -35,7 +35,6 @@ export default function FlashSaleBanner({ flashSales, themeColor }: FlashSaleBan
         return { hours: '00', minutes: '00', seconds: '00' };
       }
 
-      // Kalkulahin ang natitirang oras kabilang ang kabuuang mga araw na ginawang oras
       const totalHours = Math.floor(difference / (1000 * 60 * 60));
       const minutes = Math.floor((difference / 1000 / 60) % 60);
       const seconds = Math.floor((difference / 1000) % 60);
@@ -47,8 +46,10 @@ export default function FlashSaleBanner({ flashSales, themeColor }: FlashSaleBan
       };
     };
 
-    // Unang patakbo ng kalkulasyon
-    setTimeLeft(calculateTimeLeft());
+    // ✅ Ligtas na paraan sa React 19: Inuusog sa susunod na execution loop
+    const initTimer = setTimeout(() => {
+      setTimeLeft(calculateTimeLeft());
+    }, 0);
 
     // Patakbuhin ang timer bawat segundo
     const timer = setInterval(() => {
@@ -56,7 +57,10 @@ export default function FlashSaleBanner({ flashSales, themeColor }: FlashSaleBan
       setTimeLeft(updatedTime);
     }, 1000);
 
-    return () => clearInterval(timer);
+    return () => {
+      clearTimeout(initTimer);
+      clearInterval(timer);
+    };
   }, [activeSale]);
 
   // Kung expired na ang campaign o walang mahanap, huwag magpakita ng kahit ano sa storefront

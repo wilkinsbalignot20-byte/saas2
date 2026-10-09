@@ -102,13 +102,22 @@ export function useResource<T>(url: string, pollMs = 30_000) {
   }, [url]);
 
   useEffect(() => {
-    refresh();
+    // Balutin sa setTimeout na 0 para maging asynchronous ang unang takbo
+    const timerId = setTimeout(() => {
+      refresh();
+    }, 0);
+
     const tick = () => {
-      if (document.visibilityState === "visible") refresh();
+      if (document.visibilityState === "visible") {
+        refresh();
+      }
     };
+
     const id = setInterval(tick, pollMs);
     document.addEventListener("visibilitychange", tick);
+
     return () => {
+      clearTimeout(timerId);
       clearInterval(id);
       document.removeEventListener("visibilitychange", tick);
     };

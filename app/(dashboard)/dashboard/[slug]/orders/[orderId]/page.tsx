@@ -102,7 +102,7 @@ export default async function OrderIdPage({ params }: OrderIdPageProps) {
               ))}
             </div>
 
-            {/* FINANCIAL BREAKDOWN */}
+ {/* FINANCIAL BREAKDOWN */}
             <div className="border-t border-slate-100 dark:border-slate-800 mt-6 pt-4 space-y-2 text-sm text-slate-600 dark:text-slate-400">
               <div className="flex justify-between">
                 <span>Subtotal</span>
@@ -167,7 +167,9 @@ export default async function OrderIdPage({ params }: OrderIdPageProps) {
               {order.notes && (
                 <div>
                   <span className="block text-slate-400 font-medium">Order Notes</span>
-                  <p className="text-slate-600 dark:text-slate-400 italic">"{order.notes}"</p>
+                  <p className="text-slate-600 dark:text-slate-400 italic">
+                    &quot;{order.notes}&quot;
+                  </p>
                 </div>
               )}
             </div>
@@ -178,3 +180,4 @@ export default async function OrderIdPage({ params }: OrderIdPageProps) {
     </div>
   );
 }
+

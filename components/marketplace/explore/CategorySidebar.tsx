@@ -26,38 +26,6 @@ export default function CategorySidebar() {
   const currentCategory = searchParams.get('category') || '';
   const [isOpen, setIsOpen] = useState(false);
 
-  // Content para sa listahan ng mga kategorya
-  const SidebarContent = () => (
-    <div className="space-y-3">
-      <h3 className="px-3 text-sm font-semibold text-[#1B211D]">Mga Kategorya</h3>
-      <nav className="space-y-0.5">
-        <Link
-          href="/shop/explore"
-          onClick={() => setIsOpen(false)}
-          className={`${linkBase} ${!currentCategory ? linkActive : linkIdle}`}
-        >
-          <PackageCheck size={18} className={!currentCategory ? 'text-[#3E8F68]' : 'text-[#1B211D]/40'} />
-          <span>Lahat ng Produkto</span>
-        </Link>
-        {MAJOR_CATEGORIES.map((cat) => {
-          const Icon = cat.icon;
-          const isActive = currentCategory === cat.slug;
-          return (
-            <Link
-              key={cat.slug}
-              href={`/shop/explore?category=${cat.slug}`}
-              onClick={() => setIsOpen(false)}
-              className={`${linkBase} ${isActive ? linkActive : linkIdle}`}
-            >
-              <Icon size={18} className={isActive ? 'text-[#3E8F68]' : 'text-[#1B211D]/40'} />
-              <span>{cat.name}</span>
-            </Link>
-          );
-        })}
-      </nav>
-    </div>
-  );
-
   return (
     <>
       {/* 1. MOBILE ONLY TRIGGER BUTTON */}
@@ -92,10 +60,10 @@ export default function CategorySidebar() {
                   <X size={20} />
                 </button>
               </div>
-              <SidebarContent />
+              {/* Ipasa ang states bilang props dito */}
+              <SidebarContent currentCategory={currentCategory} setIsOpen={setIsOpen} />
             </div>
 
-            {/* Ligtas na ilalagay ang banner sa pinaka-baba ng mobile menu drawer */}
             <div className="mt-8 border-t border-[#1B211D]/10 pt-2">
               <PromoAdBanner />
             </div>
@@ -105,9 +73,49 @@ export default function CategorySidebar() {
 
       {/* 3. DESKTOP VIEW PANEL */}
       <aside className="sticky top-20 hidden w-60 shrink-0 self-start md:block">
-        <SidebarContent />
+        {/* Ipasa ang states bilang props dito */}
+        <SidebarContent currentCategory={currentCategory} setIsOpen={setIsOpen} />
         <PromoAdBanner />
       </aside>
     </>
+  );
+}
+
+// ✅ TAMA: Ang SidebarContent component ay nasa labas na ngayon ng pangunahing render function
+interface SidebarContentProps {
+  currentCategory: string;
+  setIsOpen: (open: boolean) => void;
+}
+
+function SidebarContent({ currentCategory, setIsOpen }: SidebarContentProps) {
+  return (
+    <div className="space-y-3">
+      <h3 className="px-3 text-sm font-semibold text-[#1B211D]">Mga Kategorya</h3>
+      <nav className="space-y-0.5">
+        <Link
+          href="/shop/explore"
+          onClick={() => setIsOpen(false)}
+          className={`${linkBase} ${!currentCategory ? linkActive : linkIdle}`}
+        >
+          <PackageCheck size={18} className={!currentCategory ? 'text-[#3E8F68]' : 'text-[#1B211D]/40'} />
+          <span>Lahat ng Produkto</span>
+        </Link>
+        {MAJOR_CATEGORIES.map((cat) => {
+          const Icon = cat.icon;
+          const isActive = currentCategory === cat.slug;
+          return (
+            <Link
+              key={cat.slug}
+              href={`/shop/explore?category=${cat.slug}`}
+              onClick={() => setIsOpen(false)}
+              className={`${linkBase} ${isActive ? linkActive : linkIdle}`}
+            >
+              <Icon size={18} className={isActive ? 'text-[#3E8F68]' : 'text-[#1B211D]/40'} />
+              <span>{cat.name}</span>
+            </Link>
+          );
+        })}
+      </nav>
+    </div>
   );
 }

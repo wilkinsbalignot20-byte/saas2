@@ -41,7 +41,7 @@ interface AttributeGroup {
   options: string; // Halimbawa: "S, M, L" o "Red, Blue"
 }
 
-export default function ProductForm({ categories, slug, storeName, productId, initialData }: ProductFormProps) {
+export default function ProductForm({ categories, slug, storeName, initialData }: ProductFormProps) {
   const router = useRouter();
   
   // Isalaksak ang initial data strings para magkaroon ng laman agad ang mga fields

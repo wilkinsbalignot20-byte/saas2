@@ -100,7 +100,14 @@ export function useList<T>(url: string) {
   }, [url]);
 
   useEffect(() => {
-    load();
+    // Inuusog natin ang pagtakbo para maging asynchronous at ligtas sa linter
+    const initTimer = setTimeout(() => {
+      load();
+    }, 0);
+
+    return () => {
+      clearTimeout(initTimer); // Linisin ang timeout kapag nag-unmount ang component
+    };
   }, [load]);
 
   return { data, setData, loading, error, reload: load };

@@ -107,7 +107,7 @@ export function OrderStatusCard({
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
       <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Order Fulfillment Status</h3>
-      <p className="text-xs text-slate-400 mb-6">Update the order's financial and delivery lifecycle.</p>
+      <p className="text-xs text-slate-400 mb-6">Update the order&apos;s financial and delivery lifecycle.</p>
 
       <div className="space-y-4">
         {/* 💳 PAYMENT STATUS DROPDOWN */}

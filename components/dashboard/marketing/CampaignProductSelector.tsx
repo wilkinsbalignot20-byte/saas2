@@ -2,8 +2,8 @@
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
-import { Search, X, CheckSquare, Square, Percent, Banknote } from "lucide-react";
-import { inputClass, btnPrimary, btnSecondary } from "./shared";
+import { Search, X } from "lucide-react";
+import { inputClass, btnPrimary,} from "./shared";
 
 // Patalasin ang mga properties base sa iyong database configuration
 interface Variant {

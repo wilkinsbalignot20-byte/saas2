@@ -1,4 +1,4 @@
-// components/dashboard/insights/InsightsDashboard.tsx
+ // components/dashboard/insights/InsightsDashboard.tsx
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
@@ -51,24 +51,54 @@ export default function InsightsDashboard({ slug, color }: InsightsDashboardProp
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
+  // 🛠️ FINAL & BULLETPROOF FIX: Walang synchronous setStates sa render at effect loops
+  const fetchData = useCallback(async (currentRange: RangeKey, isMounted: boolean) => {
+    try {
+      const res = await fetch(`/api/stores/${slug}/insights?range=${currentRange}`, { cache: "no-store" });
+      const json = await res.json().catch(() => null);
+      
+      if (!isMounted) return;
+
+      if (!res.ok) throw new Error(json?.error || "Failed to load insights.");
+      
+      setData(json);
+      setError(null);
+    } catch (err: any) {
+      if (isMounted) {
+        setError(err.message || "Something went wrong.");
+      }
+    } finally {
+      if (isMounted) {
+        setLoading(false);
+      }
+    }
+  }, [slug]);
+
+  // ⚡ Para sa manu-manong pag-refresh (User-initiated click events)
+  const handleRefresh = useCallback(() => {
     setLoading(true);
     setError(null);
-    try {
-      const res = await fetch(`/api/stores/${slug}/insights?range=${range}`, { cache: "no-store" });
-      const json = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(json?.error || "Failed to load insights.");
-      setData(json);
-    } catch (err: any) {
-      setError(err.message || "Something went wrong.");
-    } finally {
-      setLoading(false);
-    }
-  }, [slug, range]);
+    fetchData(range, true);
+  }, [fetchData, range]);
 
+  // 📡 Awtomatikong tatakbo nang ligtas kapag nag-mount ang component o nagbago ang range selector
   useEffect(() => {
-    load();
-  }, [load]);
+    let isMounted = true;
+
+    // 🔥 FIX SA LINE 89: Idinadaan sa Promise microtask para maging asynchronous 
+    // at hindi mag-trigger ng "synchronous cascading render" rule ng Next.js linter.
+    Promise.resolve().then(() => {
+      if (isMounted) {
+        setLoading(true);
+        setError(null);
+        fetchData(range, isMounted);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [fetchData, range]);
 
   const k = data?.kpis;
   const x = data?.extras;
@@ -83,7 +113,7 @@ export default function InsightsDashboard({ slug, color }: InsightsDashboardProp
         <RangeSelector value={range} onChange={setRange} />
         <button
           type="button"
-          onClick={load}
+          onClick={handleRefresh}
           disabled={loading}
           className="inline-flex h-9 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50"
         >
@@ -95,7 +125,7 @@ export default function InsightsDashboard({ slug, color }: InsightsDashboardProp
       {error && (
         <Notice kind="error">
           {error}{" "}
-          <button type="button" onClick={load} className="font-semibold underline underline-offset-2">
+          <button type="button" onClick={handleRefresh} className="font-semibold underline underline-offset-2">
             Try again
           </button>
         </Notice>

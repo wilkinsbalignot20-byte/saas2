@@ -55,8 +55,7 @@ export async function POST(req: NextRequest, { params }: RouteContext) {
             type: "section",
             text: {
               type: "mrkdwn",
-         text: `✨ *Matagumpay na nakatawid ang Ingestion Engine mo!* \n\n🏪 *Store Name:* ${store.name}\n🔗 *Tenant Slug:* ${slug}\n📡 *Gateway Status:* Connected & Operational`
-
+              text: `✨ *Matagumpay na nakatawid ang Ingestion Engine mo!* \n\n🏪 *Store Name:* ${store.name}\n🔗 *Tenant Slug:* ${slug}\n📡 *Gateway Status:* Connected & Operational`
             }
           },
           {
@@ -123,6 +122,8 @@ export async function DELETE(req: NextRequest, { params }: RouteContext) {
     return NextResponse.json({ success: true }, { status: 200 });
 
   } catch (error) {
-    return fail("Gagal sa pagtanggal ng configuration.", 500);
+    // 🛠️ FIX: I-log ang error para magamit ang variable at hindi mag-warning ang linter
+    console.error("Slack DELETE Error:", error);
+    return fail("Bigo sa pagtanggal ng configuration.", 500);
   }
 }

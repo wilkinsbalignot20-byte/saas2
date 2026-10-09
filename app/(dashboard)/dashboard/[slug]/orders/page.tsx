@@ -1,7 +1,7 @@
-  // app/(dashboard)/dashboard/[slug]/orders/page.tsx
+ // app/(dashboard)/dashboard/[slug]/orders/page.tsx
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { Order, OrderItem } from "@prisma/client";
+import { Order, OrderItem } from "@prisma/client"; // Ibinalik natin si OrderItem para sa strict typing sa map
 import { OrdersDataTable } from "@/components/dashboard/orders/OrdersDataTable";
 
 interface OrdersPageProps {
@@ -26,6 +26,7 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
   }
 
   // 📑 FETCH ORDERS
+  // Siniguro nating alam ng Prisma na kasama ang orderItems sa type inference
   const orders = await prisma.order.findMany({
     where: { storeId: store.id },
     include: { orderItems: true },
@@ -33,12 +34,12 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
   });
 
   // 📊 SUMMARY (cancelled orders hindi isinasama sa revenue at pending counts)
-  const active = orders.filter((order : Order) => order.shippingStatus !== "cancelled");
+  const active = orders.filter((order: Order) => order.shippingStatus !== "cancelled");
   const revenue = active
-    .filter((order : Order) => order.paymentStatus === "paid")
-    .reduce((sum, order : Order) => sum + Number(order.totalAmount), 0);
-  const toFulfill = active.filter((order : Order) => order.shippingStatus === "unfulfilled").length;
-  const awaitingPayment = active.filter((order : Order) => order.paymentStatus === "pending").length;
+    .filter((order: Order) => order.paymentStatus === "paid")
+    .reduce((sum, order: Order) => sum + Number(order.totalAmount), 0);
+  const toFulfill = active.filter((order: Order) => order.shippingStatus === "unfulfilled").length;
+  const awaitingPayment = active.filter((order: Order) => order.paymentStatus === "pending").length;
 
   const stats = [
     { label: "Total orders", value: orders.length.toLocaleString("en-PH"), hint: "All time" },
@@ -47,8 +48,8 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
     { label: "Awaiting payment", value: awaitingPayment.toLocaleString("en-PH"), hint: "Pending payment" },
   ];
 
-  // Safe serialization para sa Decimal at Date types
-  const serializedOrders = orders.map((order : any) => ({
+  // Safe serialization para sa Decimal at Date types na may malinis na typing
+  const serializedOrders = orders.map((order) => ({
     ...order,
     subtotal: order.subtotal.toString(),
     shippingFee: order.shippingFee.toString(),
@@ -56,7 +57,7 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
     totalAmount: order.totalAmount.toString(),
     createdAt: order.createdAt.toISOString(),
     updatedAt: order.updatedAt.toISOString(),
-    orderItems: order.orderItems.map((item : any) => ({
+    orderItems: (order.orderItems || []).map((item: OrderItem) => ({
       ...item,
       priceAtPurchase: item.priceAtPurchase.toString(),
     })),
@@ -93,7 +94,7 @@ export default async function OrdersPage({ params }: OrdersPageProps) {
       </section>
 
       {/* TABLE */}
-      <OrdersDataTable orders={serializedOrders} themeColor={store.themeColor} slug={slug} />
+      <OrdersDataTable orders={serializedOrders as any} themeColor={store.themeColor} slug={slug} />
     </div>
   );
 }
