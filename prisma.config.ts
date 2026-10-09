@@ -2,8 +2,9 @@
 import { defineConfig, env } from "prisma/config";
 
 export default defineConfig({
-  schema: "prisma/schema.prisma",
+  // 🟢 DAPAT PANGALAN NG FOLDER LANG ("prisma"), HINDI FILE ("schema.prisma")!
+  schema: "prisma", 
   datasource: {
-    url: env("DATABASE_URL"), // <--- ITO LAMANG ANG DAPAT MATIRA DITO!
+    url: env("DATABASE_URL"), 
   },
 });

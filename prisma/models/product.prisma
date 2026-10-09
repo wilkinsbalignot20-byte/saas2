@@ -1,0 +1,56 @@
+// prisma/models/product.prisma
+
+model Category {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String
+  slug      String   // Para sa marketplace routing at filtering
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // RELATIONS
+  storeId   String   @map("store_id") @db.Uuid
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  products  Product[]
+
+  @@unique([storeId, slug]) // Hindi pwedeng magka-pareho ng slug ang dalawang kategorya sa iisang tindahan
+  @@map("categories")
+}
+
+model Product {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String
+  description String?  @db.Text
+  images      String[] // Array ng Cloudinary URLs para sa maramihang larawan
+  status      String   @default("draft") // "draft" o "published"
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // RELATIONS
+  storeId     String   @map("store_id") @db.Uuid
+  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  
+  categoryId  String   @map("category_id") @db.Uuid
+  category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  
+  variants    ProductVariant[] // Dito nakakabit ang iyong inventory at SKU layer
+
+  @@map("products")
+}
+
+model ProductVariant {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   // Halimbawa: "Red / Size 9" o "Standard"
+  sku       String   @unique // Natatanging business identifier para sa imbentaryo
+  price     Decimal  @default(0.00) @db.Decimal(10, 2) // Swak sa e-commerce para walang rounding errors ang pera
+  stock     Int      @default(0) // Ang iyong core inventory tracking count
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  // RELATIONS
+  productId String   @map("product_id") @db.Uuid
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  orderItems OrderItem[] 
+
+  @@map("product_variants")
+}

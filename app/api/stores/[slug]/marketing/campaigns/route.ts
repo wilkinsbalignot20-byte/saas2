@@ -104,7 +104,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
     const { slug } = await context.params;
     const body = await req.json();
-    const { campaignId, isPremiumBoosted, boostedSlotType } = body;
+    
+    // 🌟 GINAMIT: Tinatanggap na rin natin ang boostedDurationDays na pinili ng tenant sa dropdown form
+    const { campaignId, isPremiumBoosted, boostedSlotType, boostedDurationDays } = body;
 
     if (!campaignId) {
       return NextResponse.json({ error: "Kulang ang Campaign ID." }, { status: 400 });
@@ -119,14 +121,45 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ error: "Hindi nahanap ang tindahan." }, { status: 404 });
     }
 
+    // 💡 DISKARTE: Kung pinatay o tinanggal ng tenant ang boost (Cancel Boost Action)
+    if (!isPremiumBoosted) {
+      const resetCampaign = await prisma.campaign.update({
+        where: { 
+          id: campaignId,
+          storeId: store.id 
+        },
+        data: {
+          isPremiumBoosted: false,
+          boostedSlotType: null,
+          boostedDurationDays: null,
+          boostedAt: null,
+          boostedUntil: null,
+        },
+      });
+      return NextResponse.json(resetCampaign);
+    }
+
+    // 💡 MATALINONG KALKULASYON:
+    // Kukunin ang kasalukuyang oras ng pag-click. Kung walang duration na ipinadala, default natin sa 7 days.
+    const now = new Date();
+    const duration = boostedDurationDays ? Number(boostedDurationDays) : 7;
+    
+    // Alamin kung kailan mapapaso ang premium placement (Oras ngayon + bilang ng araw)
+    const boostedUntilDate = new Date();
+    boostedUntilDate.setDate(now.getDate() + duration);
+
+    // I-save sa database gamit ang bago mong Supabase structural columns
     const updatedCampaign = await prisma.campaign.update({
       where: { 
         id: campaignId,
         storeId: store.id 
       },
       data: {
-        isPremiumBoosted,
-        boostedSlotType,
+        isPremiumBoosted: true,
+        boostedSlotType: boostedSlotType,
+        boostedDurationDays: duration,
+        boostedAt: now,
+        boostedUntil: boostedUntilDate, // ⚡ Awtomatikong mase-save ang dulo ng promo run
       },
     });
 
@@ -137,44 +170,3 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   }
 }
 
-// ⚡ 4. DELETE METHOD: Para burahin ang campaign gamit ang URL query parameter (?id=CAMPAIGN_ID)
-export async function DELETE(req: NextRequest, context: RouteContext) {
-  try {
-    const { slug } = await context.params;
-    const { searchParams } = new URL(req.url);
-    const campaignId = searchParams.get("id");
-
-    if (!campaignId) {
-      return NextResponse.json({ error: "Kulang ang Campaign ID." }, { status: 400 });
-    }
-
-    // Siguraduhin muna natin na ang tindahan ay may-ari talaga ng buburahing campaign
-    const store = await prisma.store.findUnique({
-      where: { slug },
-      select: { id: true },
-    });
-
-    if (!store) {
-      return NextResponse.json({ error: "Hindi nahanap ang tindahan." }, { status: 404 });
-    }
-
-    // 🌟 MAHALAGA: Kung may cascade delete ang Prisma schema mo para sa CampaignRules, sapat na ito.
-    // Kung walang cascade delete sa schema, kailangan muna nating burahin nang manu-mano ang mga rules:
-    await prisma.campaignRule.deleteMany({
-      where: { campaignId: campaignId }
-    });
-
-    // Pagbura sa mismong campaign record
-    const deletedCampaign = await prisma.campaign.delete({
-      where: {
-        id: campaignId,
-        storeId: store.id,
-      },
-    });
-
-    return NextResponse.json({ success: true, message: "Matagumpay na nabura ang campaign.", deletedCampaign });
-  } catch (error) {
-    console.error("Campaign DELETE Error:", error);
-    return NextResponse.json({ error: "Hindi ma-delete ang campaign." }, { status: 500 });
-  }
-}

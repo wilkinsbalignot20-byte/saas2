@@ -1,0 +1,28 @@
+// prisma/models/customer.prisma
+
+model SignupCustomer {
+  id           String   @id
+  email        String   @unique
+  fullName     String   @map("full_name")
+  phone        String
+  altPhone     String?  @map("alt_phone")
+  street       String
+  barangay     String
+  city         String   @map("city_municipality")
+  province     String
+  zipCode      String   @map("zip_code")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  @@map("signup_customers")
+}
+
+model OtpVerification {
+  id        String   @id @default(uuid())
+  email     String   
+  code      String   
+  expiresAt DateTime @map("expires_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("otp_verifications")
+}

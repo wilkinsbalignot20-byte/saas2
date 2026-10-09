@@ -13,6 +13,7 @@ export function usePremiumBoost(tenantSlug: string) {
 
   const [selectedId, setSelectedId] = useState("");
   const [slotType, setSlotType] = useState<string>(SLOTS[0].value);
+  const [duration, setDuration] = useState<number>(7);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState<NoticeState>(null);
 
@@ -38,6 +39,7 @@ export function usePremiumBoost(tenantSlug: string) {
         campaignId: selected.id,
         isPremiumBoosted: true,
         boostedSlotType: slotType,
+        boostedDurationDays: duration,
       });
       setData((list) =>
         list.map((c) => (c.id === selected.id ? { ...c, isPremiumBoosted: true, boostedSlotType: slotType } : c))
@@ -64,6 +66,8 @@ export function usePremiumBoost(tenantSlug: string) {
 
   return {
     // list state
+    setDuration,
+    duration,
     loading,
     loadError,
     reload,

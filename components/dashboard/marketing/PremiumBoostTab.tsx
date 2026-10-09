@@ -50,6 +50,7 @@ export default function PremiumBoostTab({ tenantSlug }: { tenantSlug: string }) 
       ) : (
         <>
           <BoostForm
+            tenantSlug={tenantSlug}
             eligible={b.eligible}
             selected={b.selected}
             selectedId={b.selectedId}
@@ -57,6 +58,8 @@ export default function PremiumBoostTab({ tenantSlug }: { tenantSlug: string }) 
             slotType={b.slotType}
             slotLabel={b.slot.label}
             onSelectSlot={b.setSlotType}
+            duration={b.duration}
+            onSelectDuration={b.setDuration}
             saving={b.saving}
             onSubmit={b.boost}
           />
