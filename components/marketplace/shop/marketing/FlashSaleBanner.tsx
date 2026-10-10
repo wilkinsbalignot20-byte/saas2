@@ -1,4 +1,4 @@
-// components/marketplace/shop/FlashSaleBanner.tsx
+ // components/marketplace/shop/FlashSaleBanner.tsx
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -7,7 +7,8 @@ import { Flame, Zap } from 'lucide-react';
 interface FlashSaleItem {
   id: string;
   name: string;
-  endTime: string; // ISO date string mula sa database (e.g., '2026-10-31T23:59:59Z')
+  endTime: string;
+  endDate?: string; // ISO date string mula sa database
   discountValue: number; 
   discountType: 'percentage' | 'fixed';
 }
@@ -18,17 +19,24 @@ interface FlashSaleBannerProps {
 }
 
 export default function FlashSaleBanner({ flashSales, themeColor }: FlashSaleBannerProps) {
-  // Kunin muna natin ang unang aktibong flash sale campaign ng seller
   const activeSale = flashSales[0]; 
   
   const [timeLeft, setTimeLeft] = useState({ hours: '00', minutes: '00', seconds: '00' });
   const [isExpired, setIsExpired] = useState(false);
+  
+  // 🛡️ LUNAS SA HYDRATION ERROR: Tinitiyak na ang component ay ligtas na naka-mount sa client browser
+  const [isMounted, setIsMounted] = useState(false);
 
   useEffect(() => {
+    setIsMounted(true); // 👈 I-set sa true kapag nasa browser na
     if (!activeSale) return;
 
     const calculateTimeLeft = () => {
-      const difference = +new Date(activeSale.endTime) - +new Date();
+      // Siguraduhing mayroong sapat na string bago i-parse ang Petsa
+      const targetTime = activeSale.endTime || activeSale.endDate; 
+      if (!targetTime) return { hours: '00', minutes: '00', seconds: '00' };
+
+      const difference = +new Date(targetTime) - +new Date();
       
       if (difference <= 0) {
         setIsExpired(true);
@@ -46,24 +54,19 @@ export default function FlashSaleBanner({ flashSales, themeColor }: FlashSaleBan
       };
     };
 
-    // ✅ Ligtas na paraan sa React 19: Inuusog sa susunod na execution loop
-    const initTimer = setTimeout(() => {
-      setTimeLeft(calculateTimeLeft());
-    }, 0);
+    // Unang pag-load ng orasan
+    setTimeLeft(calculateTimeLeft());
 
     // Patakbuhin ang timer bawat segundo
     const timer = setInterval(() => {
-      const updatedTime = calculateTimeLeft();
-      setTimeLeft(updatedTime);
+      setTimeLeft(calculateTimeLeft());
     }, 1000);
 
-    return () => {
-      clearTimeout(initTimer);
-      clearInterval(timer);
-    };
+    return () => clearInterval(timer);
   }, [activeSale]);
 
-  // Kung expired na ang campaign o walang mahanap, huwag magpakita ng kahit ano sa storefront
+  // 🛡️ Huwag mag-render sa server hangga't hindi pa handa ang client browser (Hydration Lock)
+  if (!isMounted) return null;
   if (!activeSale || isExpired) return null;
 
   return (
@@ -71,7 +74,6 @@ export default function FlashSaleBanner({ flashSales, themeColor }: FlashSaleBan
       
       {/* KALIWANG BAHAGI: CAMPAIGN TITLE & BADGES */}
       <div className="flex items-center gap-4">
-        {/* Animated Lightning Icon Holder */}
         <div 
           className="w-12 h-12 rounded-xl flex items-center justify-center text-white shrink-0 shadow-sm animate-pulse"
           style={{ backgroundColor: themeColor }}
@@ -108,7 +110,7 @@ export default function FlashSaleBanner({ flashSales, themeColor }: FlashSaleBan
             {timeLeft.hours}
           </div>
         </div>
-        <span className="font-bold text-slate-900 animate-ping">:</span>
+        <span className="font-bold text-slate-900">:</span>
 
         {/* MINUTES BOX */}
         <div className="flex flex-col items-center">
@@ -116,11 +118,10 @@ export default function FlashSaleBanner({ flashSales, themeColor }: FlashSaleBan
             {timeLeft.minutes}
           </div>
         </div>
-        <span className="font-bold text-slate-900 animate-ping">:</span>
+        <span className="font-bold text-slate-900">:</span>
 
         {/* SECONDS BOX */}
         <div className="flex flex-col items-center">
-          {/* Kulay ng seconds text ay gagamit ng themeColor para maging highlight anchor */}
           <div 
             className="text-white font-mono font-black text-sm px-2.5 py-1.5 rounded-lg shadow-sm tracking-wide min-w-[36px] text-center transition-colors"
             style={{ backgroundColor: themeColor }}
