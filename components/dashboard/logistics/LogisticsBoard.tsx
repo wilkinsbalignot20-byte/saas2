@@ -1,11 +1,22 @@
  "use client";
 
 import { useState } from "react";
-import { Truck, PackageCheck, ClipboardList, Bike } from "lucide-react";
+import { Truck, PackageCheck, ClipboardList, Bike, MapPin } from "lucide-react"; // ✅ Idinagdag ang MapPin icon
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useResource, type Courier, type Delivery } from "./utils";
 import DispatchTab from "./DispatchTab";
 import RidersTab from "./RidersTab";
+import dynamic from "next/dynamic"; // ✅ Idinagdag para sa dynamic rendering ng mapa
+
+// ✅ Ligtas na pag-import ng mapa para sa client-side lamang upang maiwasan ang SSR errors ng Leaflet
+const LogisticsMap = dynamic(() => import("./dispatch/LogisticsMap"), {
+  ssr: false,
+  loading: () => (
+    <div className="h-[500px] w-full bg-slate-100 rounded-xl flex items-center justify-center text-slate-400">
+      Loading map components...
+    </div>
+  ),
+});
 
 interface LogisticsBoardProps {
   slug: string;
@@ -67,7 +78,8 @@ export default function LogisticsBoard({ slug, storeName, pickupAddress }: Logis
       </section>
 
       <Tabs value={tab} onValueChange={setTab} className="w-full space-y-5">
-        <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1 sm:max-w-md">
+        {/* ✅ Ginawang grid-cols-3 ang TabsList para magkasya ang tatlong buttons */}
+        <TabsList className="grid h-auto w-full grid-cols-3 gap-1 rounded-xl bg-slate-100 p-1 sm:max-w-md">
           <TabsTrigger value="dispatch" className={triggerClass}>
             <Truck size={16} aria-hidden />
             Dispatch
@@ -82,6 +94,11 @@ export default function LogisticsBoard({ slug, storeName, pickupAddress }: Logis
             Riders
             <span className="text-xs text-slate-400 tabular-nums">{couriers.length}</span>
           </TabsTrigger>
+          {/* ✅ ANG BAGONG TAB TRIGGER PARA SA MAPA */}
+          <TabsTrigger value="map" className={triggerClass}>
+            <MapPin size={16} aria-hidden />
+            Live Map
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="dispatch" className="border-none p-0 outline-none">
@@ -94,7 +111,6 @@ export default function LogisticsBoard({ slug, storeName, pickupAddress }: Logis
             loading={deliveriesApi.loading}
             error={deliveriesApi.error}
             onChanged={refreshAll}
-            onGoToRiders={() => setTab("riders")}
           />
         </TabsContent>
 
@@ -106,6 +122,16 @@ export default function LogisticsBoard({ slug, storeName, pickupAddress }: Logis
             error={couriersApi.error}
             onChanged={refreshAll}
           />
+        </TabsContent>
+
+        {/* ✅ ANG BAGONG TABS CONTENT NA MAGPAPAKITA NG MAPA */}
+        <TabsContent value="map" className="border-none p-0 outline-none">
+          <div className="h-[500px] w-full rounded-xl overflow-hidden shadow-sm border border-slate-200 bg-white p-4">
+            <p className="text-sm font-medium text-slate-500 mb-3">Live Rider Tracking</p>
+            <div className="w-full h-[430px] rounded-lg overflow-hidden">
+              <LogisticsMap />
+            </div>
+          </div>
         </TabsContent>
       </Tabs>
     </div>

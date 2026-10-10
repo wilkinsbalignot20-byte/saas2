@@ -10,7 +10,8 @@ export interface DispatchTabProps {
   loading: boolean;
   error: string | null;
   onChanged: () => Promise<void>;
-  // Binura na natin ang onGoToRiders dito para hindi na maghanap ang TypeScript
+  onGoToRiders: () => void;
+  
 }
 
 export type DispatchView = "queue" | "transit" | "delivered";
