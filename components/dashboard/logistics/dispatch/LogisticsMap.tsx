@@ -2,6 +2,7 @@
 
 import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
 import L from "leaflet";
+import { type Courier } from "../utils"; // Siguraduhing tama ang import path ng iyong Courier type
 
 // Kailangan ang CSS ng Leaflet para hindi magkahiwa-hiwalay ang itsura ng mapa
 import "leaflet/dist/leaflet.css";
@@ -16,25 +17,26 @@ const defaultIcon = L.icon({
   shadowSize: [41, 41],
 });
 
-interface RiderLocation {
-  id: string;
-  name: string;
-  lat: number;
-  lng: number;
-  status: string;
-}
+type CourierWithGps = Courier & {
+  latitude?: number | string | null;
+  longitude?: number | string | null;
+};
 
-// Temporary sample data ng mga riders habang nagse-setup ka pa lang
-const sampleRiders: RiderLocation[] = [
-  { id: "1", name: "Rider Juan", lat: 14.5995, lng: 120.9842, status: "Delivering" }, // Manila
-  { id: "2", name: "Rider Pedro", lat: 14.6042, lng: 121.0234, status: "Available" }, // Sampaloc
-];
+// 🟢 Tinatanggap na ngayon ang totoong 'couriers' array mula sa database bilang props
+export default function LogisticsMap({ couriers = [] }: { couriers?: Courier[] }) {
+  
+  // 🟢 Filter: Pinapakita lang sa mapa ang mga riders na may nakuhang latitude at longitude sa database
+  const ridersWithGps = (couriers as CourierWithGps[]).filter((rider) => {
+    const latitude = Number(rider.latitude);
+    const longitude = Number(rider.longitude);
 
-export default function LogisticsMap() {
+    return !Number.isNaN(latitude) && !Number.isNaN(longitude);
+  });
+
   return (
     <div className="h-full w-full rounded-xl border border-slate-200 bg-white overflow-hidden shadow-sm">
       <MapContainer
-        center={[14.5995, 120.9842]} // Naka-center sa Manila bilang panimula
+        center={[14.7550, 121.0400]} // 🟢 Naka-center na ngayon sa Caloocan / Towerville area mo imbis na Maynila
         zoom={13}
         className="w-full h-full"
         style={{ height: "100%", width: "100%" }}
@@ -45,17 +47,25 @@ export default function LogisticsMap() {
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
         />
 
-        {/* Pagpapakita ng mga pins ng Riders */}
-        {sampleRiders.map((rider) => (
-          <Marker key={rider.id} position={[rider.lat, rider.lng]} icon={defaultIcon}>
-            <Popup>
-              <div className="text-sm">
-                <p className="font-bold text-slate-900">{rider.name}</p>
-                <p className="text-xs text-slate-500">Status: {rider.status}</p>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+        {/* Pagpapakita ng mga pins ng mga TOTOONG Riders na may GPS coordinate */}
+        {ridersWithGps.map((rider) => {
+          const latitude = Number(rider.latitude);
+          const longitude = Number(rider.longitude);
+
+          if (Number.isNaN(latitude) || Number.isNaN(longitude)) return null;
+
+          return (
+            <Marker key={rider.id} position={[latitude, longitude]} icon={defaultIcon}>
+              <Popup>
+                <div className="text-sm">
+                  <p className="font-bold text-slate-900">{rider.name}</p>
+                  <p className="text-xs text-slate-500">Vehicle: {rider.vehicleType || "Motorcycle"}</p>
+                  <p className="text-xs font-semibold text-emerald-600 mt-1">Status: {rider.status}</p>
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
       </MapContainer>
     </div>
   );

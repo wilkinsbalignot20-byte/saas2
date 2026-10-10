@@ -50,6 +50,10 @@ model Courier {
   // 🚚 BAGO: Malinis at aktibong back-relation array (Ito ang naging malabo sa gawa ni Claude)
   orders        Order[]
 
+   // 🟢 IDAGDAG ITONG DALAWANG BAGONG LINYA DITO:
+  latitude      Float?
+  longitude     Float?
+
   @@index([storeId]) // 🚚 BAGO: Index para sa mabilis na pag-load ng fleet per store
   @@map("couriers")
 }

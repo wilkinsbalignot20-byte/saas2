@@ -122,7 +122,7 @@ export async function POST(req: NextRequest, context: RouteContext) {
   }
 }
 
-// 🛵 PATCH: i-edit ang rider o i-set ang on/off duty
+// 🛵 PATCH: i-edit ang rider, i-set ang status, o i-update ang Live GPS Coordinates
 export async function PATCH(req: NextRequest, context: RouteContext) {
   try {
     const { slug } = await context.params;
@@ -138,6 +138,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
     const data: Record<string, unknown> = {};
 
+    // --- MGA LUMANG COURIER FIELDS ---
     if (body.name !== undefined) {
       const name = String(body.name).trim();
       if (name.length < 2 || name.length > 60) return fail("Name must be 2 to 60 characters.", 400);
@@ -168,6 +169,18 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       data.status = body.status;
     }
 
+    // 🟢 BAGONG DAGDAG: Tanggapin at i-validate ang GPS coordinates mula sa CP ng rider
+    if (body.latitude !== undefined) {
+      const lat = Number(body.latitude);
+      if (isNaN(lat) || lat < -90 || lat > 90) return fail("Invalid latitude value.", 400);
+      data.latitude = lat;
+    }
+    if (body.longitude !== undefined) {
+      const lng = Number(body.longitude);
+      if (isNaN(lng) || lng < -180 || lng > 180) return fail("Invalid longitude value.", 400);
+      data.longitude = lng;
+    }
+
     if (Object.keys(data).length === 0) return fail("Nothing to update.", 400);
 
     const updated = await prisma.courier.update({ where: { id: existing.id }, data });
@@ -175,28 +188,5 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
   } catch (error) {
     console.error("Courier PATCH Error:", error);
     return fail("Could not update the rider.", 500);
-  }
-}
-
-// 🛵 DELETE: /couriers?id=...
-export async function DELETE(req: NextRequest, context: RouteContext) {
-  try {
-    const { slug } = await context.params;
-    const id = new URL(req.url).searchParams.get("id");
-    if (!id) return fail("Rider id is required.", 400);
-
-    const store = await getStore(slug);
-    if (!store) return fail("Store not found.", 404);
-
-    const active = await prisma.order.count({ where: { storeId: store.id, courierId: id, shippingStatus: "shipped" } });
-    if (active > 0) return fail("This rider still has deliveries in progress.", 409);
-
-    const { count } = await prisma.courier.deleteMany({ where: { id, storeId: store.id } });
-    if (count === 0) return fail("Rider not found.", 404);
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Courier DELETE Error:", error);
-    return fail("Could not remove the rider.", 500);
   }
 }
