@@ -27,8 +27,10 @@ export function OrderStatusCard({
   themeColor,
 }: OrderStatusCardProps) {
   const router = useRouter();
-  const [paymentStatus, setPaymentStatus] = useState(currentPaymentStatus);
-  const [shippingStatus, setShippingStatus] = useState(currentShippingStatus);
+  
+  // 🛡️ Ligtas na pag-normalize sa uppercase upang makasiguro na laging tugma sa database enums
+  const [paymentStatus, setPaymentStatus] = useState((currentPaymentStatus || "").toUpperCase());
+  const [shippingStatus, setShippingStatus] = useState((currentShippingStatus || "").toUpperCase());
   
   // LOGISTICS RECONCILER STATE MANAGEMENT
   const [couriers, setCouriers] = useState<Courier[]>([]);
@@ -38,10 +40,10 @@ export function OrderStatusCard({
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
-  // FETCHING LOGIC PARA SA MGA COURIERS NG TENANT
+  // FETCHING LOGIC PARA SA MGA COURIERS NG TENANT (Binago sa UPPERCASE "SHIPPED")
   useEffect(() => {
     async function fetchAvailableCouriers() {
-      if (shippingStatus === "shipped") {
+      if (shippingStatus === "SHIPPED") {
         try {
           setLoadingCouriers(true);
           const res = await fetch(`/api/stores/${slug}/couriers?slug=${slug}`);
@@ -63,8 +65,8 @@ export function OrderStatusCard({
 
   // SYSTEM MUTATION DISPATCH TRIGGER
   const handleUpdateStatus = async () => {
-    // Validation check: kapag shipped ang pinili ngunit walang courier na naselect
-    if (shippingStatus === "shipped" && !selectedCourierId) {
+    // Validation check: kapag SHIPPED ang pinili ngunit walang courier na naselect
+    if (shippingStatus === "SHIPPED" && !selectedCourierId) {
       setMessage({ type: "error", text: "Please assign an available courier rider to dispatch this order." });
       return;
     }
@@ -81,7 +83,7 @@ export function OrderStatusCard({
         body: JSON.stringify({
           paymentStatus,
           shippingStatus,
-          courierId: shippingStatus === "shipped" ? selectedCourierId : null, // I-pasa ang courier map selection
+          courierId: shippingStatus === "SHIPPED" ? selectedCourierId : null, // I-pasa ang courier map selection
         }),
       });
 
@@ -101,8 +103,8 @@ export function OrderStatusCard({
   };
 
   // Button blocker check condition
-  const isDataUnchanged = paymentStatus === currentPaymentStatus && shippingStatus === currentShippingStatus;
-  const isCourierUnselected = shippingStatus === "shipped" && !selectedCourierId;
+  const isDataUnchanged = paymentStatus === currentPaymentStatus.toUpperCase() && shippingStatus === currentShippingStatus.toUpperCase();
+  const isCourierUnselected = shippingStatus === "SHIPPED" && !selectedCourierId;
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-950">
@@ -110,7 +112,7 @@ export function OrderStatusCard({
       <p className="text-xs text-slate-400 mb-6">Update the order&apos;s financial and delivery lifecycle.</p>
 
       <div className="space-y-4">
-        {/* 💳 PAYMENT STATUS DROPDOWN */}
+        {/* 💳 PAYMENT STATUS DROPDOWN (UPPERCASE VALUES & NEW STATES ADDED) */}
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Payment Status</label>
           <select
@@ -119,14 +121,15 @@ export function OrderStatusCard({
             onChange={(e) => setPaymentStatus(e.target.value)}
             className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
           >
-            <option value="pending">⏳ Pending</option>
-            <option value="paid">✅ Paid</option>
-            <option value="failed">❌ Failed</option>
-            <option value="refunded">🔄 Refunded</option>
+            <option value="PENDING">⏳ Pending</option>
+            <option value="PAYMENT_REVIEW">🔍 Payment Review (Verify Receipt)</option>
+            <option value="PAID">✅ Paid</option>
+            <option value="FAILED">❌ Failed</option>
+            <option value="REFUNDED">🔄 Refunded</option>
           </select>
         </div>
 
-        {/* 📦 SHIPPING / FULFILLMENT STATUS DROPDOWN */}
+        {/* 📦 SHIPPING / FULFILLMENT STATUS DROPDOWN (UPPERCASE VALUES & NEW STATES ADDED) */}
         <div className="space-y-1.5">
           <label className="text-xs font-medium text-slate-500 dark:text-slate-400">Fulfillment Status</label>
           <select
@@ -135,15 +138,18 @@ export function OrderStatusCard({
             onChange={(e) => setShippingStatus(e.target.value)}
             className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-slate-400 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
           >
-            <option value="unfulfilled">📦 Unfulfilled (Processing)</option>
-            <option value="shipped">🚚 Shipped (Out for Delivery)</option>
-            <option value="delivered">🏠 Delivered</option>
-            <option value="cancelled">🚫 Cancelled</option>
+            <option value="DRAFT">📝 Draft (Internal Order)</option>
+            <option value="UNFULFILLED">📦 Unfulfilled (Processing)</option>
+            <option value="SHIPPED">🚚 Shipped (Out for Delivery)</option>
+            <option value="DELIVERED">🏠 Delivered</option>
+            <option value="RETURN_REQUESTED">⚠️ Return Requested</option>
+            <option value="RETURNED">⏪ Returned to Warehouse</option>
+            <option value="CANCELLED">🚫 Cancelled</option>
           </select>
         </div>
 
         {/* 🚚 DYNAMIC COURIER DISPATCH SELECTOR */}
-        {shippingStatus === "shipped" && (
+        {shippingStatus === "SHIPPED" && (
           <div className="space-y-1.5 p-3.5 bg-slate-50 rounded-lg border border-slate-100 dark:bg-slate-900/40 dark:border-slate-800/60 animate-in slide-in-from-top-2 duration-200">
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">Assign Courier Rider *</label>
             {loadingCouriers ? (

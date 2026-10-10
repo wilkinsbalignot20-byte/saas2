@@ -25,6 +25,8 @@ export function OrdersDataTable({ orders, themeColor, slug }: OrdersDataTablePro
         onPaymentChange={t.changePayment}
         hasActiveFilters={t.hasActiveFilters}
         onClear={t.clearFilters}
+        filteredRows={t.pageRows}
+        statusFilter={t.statusFilter}
       />
 
       <OrdersTable

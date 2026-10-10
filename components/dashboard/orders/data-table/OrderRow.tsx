@@ -1,4 +1,4 @@
-// components/dashboard/orders/data-table/OrderRow.tsx
+ // components/dashboard/orders/data-table/OrderRow.tsx
 "use client";
 
 import Link from "next/link";
@@ -19,6 +19,10 @@ export default function OrderRow({ order, slug }: Props) {
   const href = `/dashboard/${slug}/orders/${order.id}`;
   const itemCount = order.orderItems.reduce((acc, item) => acc + item.quantity, 0);
   const initial = (order.customerName || "?").trim().charAt(0).toUpperCase();
+
+  // Ligtas na pag-normalize ng string properties para sa object styling lookup keys
+  const safePaymentStatus = (order.paymentStatus || "").toUpperCase();
+  const safeShippingStatus = (order.shippingStatus || "").toUpperCase();
 
   return (
     <tr
@@ -49,10 +53,12 @@ export default function OrderRow({ order, slug }: Props) {
         {itemCount} {itemCount === 1 ? "item" : "items"}
       </td>
       <td className="whitespace-nowrap px-4 py-3.5">
-        <StatusBadge status={order.paymentStatus} styles={PAYMENT_STYLES} />
+        {/* 🛡️ Ligtas na lookup gamit ang uppercase normalized enum parameter keys */}
+        <StatusBadge status={safePaymentStatus} styles={PAYMENT_STYLES} />
       </td>
       <td className="whitespace-nowrap px-4 py-3.5">
-        <StatusBadge status={order.shippingStatus} styles={SHIPPING_STYLES} />
+        {/* 🛡️ Ligtas na lookup gamit ang uppercase normalized enum parameter keys */}
+        <StatusBadge status={safeShippingStatus} styles={SHIPPING_STYLES} />
       </td>
       <td className="whitespace-nowrap px-4 py-3.5 text-right font-semibold text-slate-900 tabular-nums dark:text-slate-100">
         {peso.format(Number(order.totalAmount))}
