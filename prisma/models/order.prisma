@@ -28,6 +28,8 @@ model Order {
 
   @@index([storeId])
   @@index([courierId]) // 🚚 BAGO: Index para sa mabilis na paghahanap ng orders ng rider
+  @@index([storeId, shippingStatus])
+  @@index([storeId, paymentStatus])
   @@map("orders")
 }
 
@@ -67,4 +69,23 @@ model OrderItem {
   variant         ProductVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
 
   @@map("order_items")
+}
+
+// 🟢 IDAGDAG ITO SA ITAAS O IBABA NG IYONG FILE
+enum PaymentStatus {
+  PENDING          // Para sa "Pending" tab / bagong gawang order na di pa bayad
+  PAID             // "Paid orders only" sa dashboard mo
+  FAILED           // Para sa "Failed" tab (Pumalyang card/e-wallet)
+  PAYMENT_REVIEW   // Para sa "Payment Review" tab (Nag-upload ng manual GCash/Bank receipt)
+  REFUNDED         // Kapag naibalik na ang pera dahil sa Return
+}
+
+enum ShippingStatus {
+  DRAFT            // Para sa "Draft" tab (Order na ginagawa pa lang ng admin/merchant)
+  UNFULFILLED      // Kasalukuyan mong tab (Ready to pack/ship)
+  SHIPPED          // Kasalukuyan mong tab (Nasa courier na)
+  DELIVERED        // Kasalukuyan mong tab (Ntanggap na ng customer)
+  RETURN_REQUESTED // Para sa "Return" tab (Humihingi ng return ang customer)
+  RETURNED         // Para sa "Return" tab (Naibalik na ang item sa bodega/store)
+  CANCELLED        // Kasalukuyan mong tab
 }
