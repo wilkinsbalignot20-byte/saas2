@@ -1,4 +1,4 @@
-// app/api/stores/[slug]/products/[productId]/product-detail-controller.ts
+ // app/api/stores/[slug]/products/[productId]/product-detail-controller.ts
 
 import { prisma } from "@/lib/prisma";
 import { cloudinary } from "@/lib/cloudinary"; 
@@ -9,7 +9,7 @@ import { getCloudinaryPublicId } from "@/lib/cloudinary-utils";
  * Kasama ang automated Cloudinary cleanup loop at Prisma database batch transaction reconciliation via SKU layer.
  */
 export async function updateProductDetailService(productId: string, body: any) {
-  const { slug, name, description, categoryId, status, images, variants, bundles } = body;
+  const { slug, name, description, categoryId, status, images, variants } = body;
 
   // 1. TENANT SECURITY CHECK
   const existingProduct = await prisma.product.findFirst({
@@ -42,7 +42,7 @@ export async function updateProductDetailService(productId: string, body: any) {
     }
   }
 
-  // 3. CORE DATABASE BATCH TRANSACTION
+  // 3. CORE DATABASE BATCH TRANSACTION (Nalinis na para sa Single Product)
   return await prisma.$transaction(async (tx: any) => {
     // A. I-update ang pangunahing impormasyon ng produkto
     const prod = await tx.product.update({
@@ -56,7 +56,7 @@ export async function updateProductDetailService(productId: string, body: any) {
       }
     });
 
-    // B. RECONCILE VARIANTS VIA SKU
+    // B. RECONCILE VARIANTS VIA SKU LAYER
     const currentDbVariants = await tx.productVariant.findMany({
       where: { productId }
     });
@@ -90,46 +90,6 @@ export async function updateProductDetailService(productId: string, body: any) {
           stock: variant.stock
         }
       });
-    }
-
-    // C. RECONCILE PRODUCT BUNDLES LAYER
-    const currentDbBundles = await tx.productBundle.findMany({
-      where: { productId }
-    });
-
-    const incomingBundleIds = bundles.map((b: any) => b.id).filter(Boolean);
-    const bundlesToDelete = currentDbBundles.filter(
-      (dbB: any) => !incomingBundleIds.includes(dbB.id)
-    );
-
-    if (bundlesToDelete.length > 0) {
-      await tx.productBundle.deleteMany({
-        where: {
-          id: { in: bundlesToDelete.map((b: any) => b.id) }
-        }
-      });
-    }
-
-    for (const bundle of bundles) {
-      if (bundle.id) {
-        await tx.productBundle.update({
-          where: { id: bundle.id },
-          data: {
-            name: bundle.name,
-            quantity: bundle.quantity,
-            price: bundle.price
-          }
-        });
-      } else {
-        await tx.productBundle.create({
-          data: {
-            productId: productId,
-            name: bundle.name,
-            quantity: bundle.quantity,
-            price: bundle.price
-          }
-        });
-      }
     }
 
     return prod;

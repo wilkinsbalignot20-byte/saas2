@@ -3,13 +3,7 @@
 import { NextResponse } from "next/server";
 import { updateProductDetailService, deleteProductDetailService } from "./product-detail-controller";
 
-// ==========================================
-// 1. PATCH METHOD (EDIT / UPDATE PRODUCT)
-// ==========================================
-export async function PATCH(
-  request: Request,
-  context: any
-) {
+export async function PATCH(request: Request, context: any) {
   try {
     const params = await context.params;
     const productId = params.productId;
@@ -19,37 +13,24 @@ export async function PATCH(
     }
 
     const body = await request.json();
-    
-    // Tinatawag ang controller layer service upang iproseso ang buong updates at storage cleaning
     const updatedProduct = await updateProductDetailService(productId, body);
 
     return NextResponse.json({
       success: true,
-      message: "Product configurations and dynamic wholesale bundles successfully integrated.",
+      message: "Product configurations successfully integrated.",
       product: updatedProduct
     });
 
   } catch (error: any) {
     console.error("[PRODUCT_PATCH_API_ERROR]", error);
-    
-    // Saluhin ang kontroller custom settings responses
     if (error.status) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    return NextResponse.json(
-      { error: "Internal Server Error", message: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal Server Error", message: error.message }, { status: 500 });
   }
 }
 
-// ==========================================
-// 2. DELETE METHOD (FULL PRODUCT DELETION)
-// ==========================================
-export async function DELETE(
-  request: Request,
-  context: any
-) {
+export async function DELETE(request: Request, context: any) {
   try {
     const params = await context.params;
     const productId = params.productId;
@@ -59,7 +40,6 @@ export async function DELETE(
       return NextResponse.json({ error: "Missing required product or tenant identification parameters." }, { status: 400 });
     }
 
-    // Tinatawag ang isolated deletion engine sa ating controller file
     await deleteProductDetailService(productId, slug);
 
     return NextResponse.json({
@@ -69,13 +49,9 @@ export async function DELETE(
 
   } catch (error: any) {
     console.error("[PRODUCT_DELETE_API_ERROR]", error);
-    
     if (error.status) {
       return NextResponse.json({ error: error.message }, { status: error.status });
     }
-    return NextResponse.json(
-      { error: "Internal Server Error", message: error.message },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Internal Server Error", message: error.message }, { status: 500 });
   }
 }

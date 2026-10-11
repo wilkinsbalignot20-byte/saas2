@@ -1,4 +1,4 @@
-// components/dashboard/products/product-form/types.ts
+ // components/dashboard/products/product-form/types.ts
 
 export interface CategoryOption {
   id: string;
@@ -31,7 +31,8 @@ export interface ProductFormProps {
     status: string;
     categoryId: string;
     variants: VariantInput[];
-    bundles: BundleInput[];
+    // 🌟 INAYOS: Nilagyan ng question mark (?) para maging opsyonal at hindi mag-error ang iyong Single Product page!
+    bundles?: any[]; 
   };
 }
 

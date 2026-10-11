@@ -1,7 +1,7 @@
  // app/(dashboard)/dashboard/[slug]/products/page.tsx
 
 import Link from 'next/link';
-import { PlusCircle, Package } from 'lucide-react';
+import { PlusCircle, Package, Boxes } from 'lucide-react'; // Isinama ang Boxes icon para sa package bundle indicator
 import { prisma } from '@/lib/prisma';
 import ProductTable from '@/components/dashboard/products/ProductTable';
 
@@ -62,13 +62,25 @@ export default async function MerchantProductsPage({ params }: ProductsPageProps
           </p>
         </div>
 
-        <Link
-          href={`/dashboard/${slug}/products/new`}
-          className="inline-flex items-center gap-2 bg-[#3E8F68] text-white font-medium px-4 py-2.5 rounded-xl text-sm hover:bg-[#327555] active:scale-[0.98] transition-all select-none shadow-sm cursor-pointer"
-        >
-          <PlusCircle size={16} />
-          <span>Add Product</span>
-        </Link>
+        {/* 🌟 ACTION BUTTONS CONTAINER LAYER: Dito pinagsama ang single at bundle paths */}
+        <div className="flex items-center gap-3 w-full sm:w-auto">
+          {/* BAGONG BUTTON LINK PARA SA HIWALAY NA BUNDLES DASHBOARD MANAGEMENT SCREEN */}
+          <Link
+            href={`/dashboard/${slug}/products/bundles`}
+            className="inline-flex items-center justify-center gap-2 bg-white text-[#1B211D] border border-[#1B211D]/10 font-medium px-4 py-2.5 rounded-xl text-sm hover:bg-[#F6F5F1] active:scale-[0.98] transition-all select-none shadow-sm cursor-pointer"
+          >
+            <Boxes size={16} />
+            <span>Bundle Packages</span>
+          </Link>
+
+          <Link
+            href={`/dashboard/${slug}/products/new`}
+            className="inline-flex items-center gap-2 bg-[#3E8F68] text-white font-medium px-4 py-2.5 rounded-xl text-sm hover:bg-[#327555] active:scale-[0.98] transition-all select-none shadow-sm cursor-pointer"
+          >
+            <PlusCircle size={16} />
+            <span>Add Product</span>
+          </Link>
+        </div>
       </div>
 
       {/* CONDITIONAL RENDER */}
@@ -79,14 +91,24 @@ export default async function MerchantProductsPage({ params }: ProductsPageProps
           </div>
           <h3 className="text-md font-semibold text-[#1B211D]">No products found</h3>
           <p className="text-sm text-[#1B211D]/40 max-w-sm mt-1 mb-6">
-            Your inventory is currently empty. Start uploading your products to display them on your storefront.
+            Your inventory is currently empty. Start uploading your single products or manage bundle wholesale items.
           </p>
-          <Link
-            href={`/dashboard/${slug}/products/new`}
-            className="text-sm font-medium text-[#3E8F68] hover:underline"
-          >
-            Create your first product →
-          </Link>
+          
+          <div className="flex items-center gap-4">
+            <Link
+              href={`/dashboard/${slug}/products/new`}
+              className="text-sm font-medium text-[#3E8F68] hover:underline"
+            >
+              Create your first product →
+            </Link>
+            <span className="text-[#1B211D]/20 text-xs">|</span>
+            <Link
+              href={`/dashboard/${slug}/products/bundles`}
+              className="text-sm font-medium text-[#1B211D]/60 hover:text-[#1B211D] hover:underline"
+            >
+              Go to Bundle Packages →
+            </Link>
+          </div>
         </div>
       ) : (
         /* MATAGUMPAY AT LIGTAS NANG IPAPASA ANG SERIALIZED PLAIN OBJECTS ARRAY */

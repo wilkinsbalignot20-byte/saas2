@@ -41,6 +41,7 @@ model Store {
   bannerUrl         String?  @map("banner_url") @db.Text
   promoVideoUrl     String?  @map("promo_video_url") @db.Text
   promoText         String?  @map("promo_text") @db.Text
+  bundles           ProductBundle[]
 
   @@map("stores")
 }

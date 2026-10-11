@@ -10,12 +10,11 @@ interface Options {
   productId?: string;
   values: ProductFieldValues;
   variants: VariantInput[];
-  bundles?: any[]; // 🌟 IDAGDAG ITO: Upang tanggapin ang bundles input array mula sa main form component
   setErrorMessage: (message: string) => void;
 }
 
 /** Validation, pag-save, at pagbura ng produkto (Multi-tenant safe) */
-export function useProductSubmit({ slug, productId, values, variants, bundles = [], setErrorMessage }: Options) {
+export function useProductSubmit({ slug, productId, values, variants, setErrorMessage }: Options) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -48,7 +47,7 @@ export function useProductSubmit({ slug, productId, values, variants, bundles = 
       const res = await fetch(apiUrl, {
         method: apiMethod,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildProductPayload(slug, values, variants, bundles)), // 🌟 IDAGDAG ANG bundles DITO: Ipinapasa na natin ang bundles array parameter sa payload builder natin
+        body: JSON.stringify(buildProductPayload(slug, values, variants)), // Nalinis na: Tinanggal ang bundles parameter dito
       });
 
       const responseData = await res.json();

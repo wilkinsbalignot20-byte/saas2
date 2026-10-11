@@ -13,8 +13,6 @@ import { useVariants } from './product-form/useVariants';
 import { useVariantOptimizer } from './product-form/useVariantOptimizer';
 import { useProductSubmit } from './product-form/useProductSubmit';
 import { buildPreviewProps } from './product-form/utils';
-import BundlePackagesSection from './BundlePackagesSection';
-import { useBundles } from './product-form/useBundles'; // 🌟 Idinagdag ang state hook import
 import type { ProductFormProps } from './product-form/types';
 
 export default function ProductForm({ categories, slug, storeName, initialData, productId }: ProductFormProps & { productId?: string }) {
@@ -23,9 +21,6 @@ export default function ProductForm({ categories, slug, storeName, initialData, 
   const fields = useProductFields(initialData);
   const variantState = useVariants(initialData?.variants);
   
-  // 🌟 1. HAWAKAN ANG STATE NG BUNDLES (Sinasalo ang initialData kapag Edit Mode)
-  const bundleState = useBundles((initialData as any)?.bundles);
-
   const optimizer = useVariantOptimizer({
     productName: fields.name,
     slug,
@@ -33,7 +28,7 @@ export default function ProductForm({ categories, slug, storeName, initialData, 
     onError: setErrorMessage,
   });
   
-  // 🌟 2. IPASA ANG BUNDLES DATA SA SUBMISSION LOGIC LAYER
+  // 🌟 Nalinis na: Tinanggal ang bundles hook at parameter sa submission option layout
   const { submit, loading, deleteProduct, isDeleting } = useProductSubmit({
     slug,
     productId,
@@ -46,7 +41,6 @@ export default function ProductForm({ categories, slug, storeName, initialData, 
       images: fields.images,
     },
     variants: variantState.variants,
-    bundles: bundleState.bundles, // <-- IPINASA ANG MGA BUNDLES DITO
     setErrorMessage,
   });
 
@@ -74,13 +68,7 @@ export default function ProductForm({ categories, slug, storeName, initialData, 
           handleVariantChange={variantState.handleVariantChange}
         />
 
-        {/* 🌟 3. IDINAGDAG ANG VISUAL COMPONENT BOX PANEL DITO SA ILALIM NG VARIANTS */}
-        <BundlePackagesSection
-          bundles={bundleState.bundles}
-          addBundleRow={bundleState.addBundleRow}
-          removeBundleRow={bundleState.removeBundleRow}
-          handleBundleChange={bundleState.handleBundleChange}
-        />
+        {/* 🌟 Nalinis na: Tinanggal nang tuluyan ang <BundlePackagesSection /> dito */}
 
         {/* PREVIEW PARA SA MOBILE / TABLET (nasa side column sa desktop) */}
         <details open className="rounded-2xl border border-[#1B211D]/5 bg-white p-4 shadow-sm lg:hidden">

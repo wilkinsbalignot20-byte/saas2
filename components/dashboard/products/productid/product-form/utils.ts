@@ -55,8 +55,7 @@ export function generateVariantCombinations(
 export function buildProductPayload(
   slug: string, 
   values: any, 
-  variants: any[],
-  bundles: any[] = [] // <-- ITONG BAGONG PARAMETER NA IDINAGDAG NATIN
+  variants: any[]
 ) {
   return {
     slug,
@@ -71,13 +70,6 @@ export function buildProductPayload(
       sku: v.sku,
       price: parseFloat(v.price) || 0,
       stock: parseInt(v.stock, 10) || 0,
-    })),
-    // 🌟 ITO ANG NAIHANDANG LAYER PARA SA MGA BUNDLES / WHOLESALE TIERS
-    bundles: bundles.map((b) => ({
-      id: b.id || undefined,
-      name: b.name.trim() || "Special Bundle",
-      quantity: parseInt(b.quantity, 10) || 1,
-      price: parseFloat(b.price) || 0,
     })),
   };
 }

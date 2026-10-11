@@ -15,7 +15,6 @@ export default async function ProductIdPage({ params }: ProductIdPageProps) {
   const { slug, productId } = await params;
 
   // 🛡️ TENANT ISOLATION GUARD: Kunin ang product at tiyaking pag-aari ito ng store slug na nasa URL
-  // 🛡️ TENANT ISOLATION GUARD: Kunin ang product at tiyaking pag-aari ito ng store slug na nasa URL
   const product = await prisma.product.findFirst({
     where: {
       id: productId,
@@ -27,12 +26,6 @@ export default async function ProductIdPage({ params }: ProductIdPageProps) {
       variants: {
         orderBy: {
           createdAt: "asc", 
-        },
-      },
-      // 🌟 IDAGDAG ITONG RELATIONS CONTEXT SA PRISMA FETCH:
-      bundles: {
-        orderBy: {
-          createdAt: "asc",
         },
       },
       store: {
@@ -76,13 +69,7 @@ export default async function ProductIdPage({ params }: ProductIdPageProps) {
       price: variant.price.toString(), // In-align sa string format para sa state mo sa client side
       stock: variant.stock.toString(), // Convert string integer para iwas rounding crashes
     })),
-    bundles: product.bundles.map((bundle: any) => ({
-      id: bundle.id,
-      name: bundle.name,
-      quantity: bundle.quantity.toString(),
-      price: bundle.price.toString(),
-    })),
-  };
+  }; // 🌟 Inayos: Isinara nang tama ang serializedProduct object block dito
 
   return (
     <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 animate-in fade-in duration-300">
