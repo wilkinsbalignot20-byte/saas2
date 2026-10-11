@@ -11,8 +11,17 @@ interface ProductIdPageProps {
 }
 
 export default async function ProductIdPage({ params }: ProductIdPageProps) {
-  // Ligtas na i-await ang params para sa Next.js 16 execution criteria
+  // Ligtas na i-await ang params para sa Next.js execution criteria
   const { slug, productId } = await params;
+
+  // 🟢 MAXIMUM SAFETY GUARD (UUID REGEX FILTER):
+  // Tinitiyak nito na ang productId ay sumusunod sa 36-character UUID format ng Postgres/Supabase.
+  // Kung ang pumasok mula sa URL ay isang letra lang tulad ng "h", awtomatiko itong magtatapon sa
+  // Next.js 404 screen sa halip na pabagsakin at i-crash ang buong backend transaction process mo!
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  if (!uuidRegex.test(productId)) {
+    return notFound();
+  }
 
   // 🛡️ TENANT ISOLATION GUARD: Kunin ang product at tiyaking pag-aari ito ng store slug na nasa URL
   const product = await prisma.product.findFirst({
@@ -69,7 +78,7 @@ export default async function ProductIdPage({ params }: ProductIdPageProps) {
       price: variant.price.toString(), // In-align sa string format para sa state mo sa client side
       stock: variant.stock.toString(), // Convert string integer para iwas rounding crashes
     })),
-  }; // 🌟 Inayos: Isinara nang tama ang serializedProduct object block dito
+  };
 
   return (
     <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6 animate-in fade-in duration-300">

@@ -63,7 +63,7 @@ model ProductBundle {
   status      String              @default("draft") // "draft" o "published"
   createdAt   DateTime            @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime            @updatedAt @map("updated_at") @db.Timestamptz
-  bundleType  String              @default("MIX_AND_MATCH") // "MIX_AND_MATCH" o "FIXED_PACKAGE"
+  bundleType  String              @default("MIX_AND_MATCH") @map("bundle_type")
 
   // RELATIONS
   storeId     String              @map("store_id") @db.Uuid
@@ -82,7 +82,7 @@ model ProductBundleTier {
   id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   quantity  Int           // Dito ilalagay kung 3, 5, o kahit ilang piraso ang trip ng tenant
   price     Decimal       @default(0.00) @db.Decimal(10, 2) // Ang presyo na itinakda ni tenant para sa tier na ito
-  images    String[]      // Cloudinary group photo para sa partikular na bundle size na ito
+  images    String
   createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime      @updatedAt @map("updated_at") @db.Timestamptz
 

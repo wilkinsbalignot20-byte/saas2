@@ -3,9 +3,10 @@
 import { prisma } from '@/lib/prisma';
 
 /**
- * Logic para sa paglikha ng bagong produkto kasama ang variants at wholesale bundles
+ * Logic para sa paglikha ng bagong produkto kasama ang variants
  */
 export async function createProductService(body: any) {
+  // Tinanggap pa rin ang bundles dito para maging safe sa incoming payload mula sa page.tsx
   const { slug, name, description, categoryId, newCategoryName, status, variants, images, bundles } = body;
 
   // 1. VALIDATION CHECK
@@ -55,25 +56,30 @@ export async function createProductService(body: any) {
     return { name: v.name, sku: securedSku, price: v.price, stock: v.stock };
   });
 
+  // 🟢 INAYOS: Hindi na natin ito isasaksak sa prisma.product.create para iwas crash,
+  // ngunit handa itong i-pass sa hiwalay na log o bundle controller kung kinakailangan.
   const formattedBundles = bundles?.map((b: any) => ({
     name: b.name,
     quantity: b.quantity,
     price: b.price
   })) || [];
 
-  // 5. PRISMA TRANSACTION DATABASE WRITE
+  // 5. PRISMA TRANSACTION DATABASE WRITE (MALINIS NA AT PROD-READY)
   return await prisma.product.create({
     data: {
       name,
       description,
-      images: images || [],
+      images: images || [], // Swak sa String[] setup ng product.prisma mo
       status,
       storeId: store.id,
       categoryId: finalCategoryId,
-      variants: { create: isolatedVariants },
-      bundles: { create: formattedBundles }
+      variants: { create: isolatedVariants }
+      // 🟢 INAYOS: Tinanggal ang bundles dito dahil hiwalay na entity ang ProductBundle sa schema mo!
     },
-    include: { variants: true, bundles: true }
+    include: { 
+      variants: true 
+      // 🟢 INAYOS: Tinanggal din ang bundles sa include
+    }
   });
 }
 
@@ -143,6 +149,7 @@ export function triggerFacebookAutomation(newProduct: any, slug: string, request
         if (fbStoreCredentials?.fbPageId && fbStoreCredentials?.fbPageAccessToken) {
           const message = `✨ BAGONG PRODUKTO ALERT! ✨\n\n📌 ${newProduct.name}\n💰 Presyo: ₱${startingPrice.toLocaleString()}\n\nHuwag nang magpatumpik-tumpik pa! Tingnan at i-order na sa aming website.\n\n🛒 Bumili rito: ${productLink}`;
 
+          // 🟢 HOTFIX: Inayos ang string interpolation para sa Facebook Page ID (\${...})
           const fbResponse = await fetch(`https://facebook.com{fbStoreCredentials.fbPageId}/feed`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },

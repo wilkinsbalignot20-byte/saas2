@@ -1,4 +1,4 @@
- // app/api/stores/[slug]/products/[productId]/route.ts
+  // app/api/stores/[slug]/products/[productId]/route.ts
 
 import { NextResponse } from "next/server";
 import { updateProductDetailService, deleteProductDetailService } from "./product-detail-controller";

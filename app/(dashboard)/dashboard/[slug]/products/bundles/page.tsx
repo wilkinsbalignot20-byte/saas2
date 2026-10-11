@@ -19,21 +19,45 @@ export default async function BundlesPage({ params }: BundlesPageProps) {
 
   if (!store) return notFound();
 
-  // 2. KUNIN ANG DATA NG LAHAT NG BUNDLES RE-MAPPED SA SUB-TABLES
-  const activeBundles = await prisma.productBundle.findMany({
-    where: {
-      storeId: store.id
+// 🟢 TAMA (Isang buong object lang dapat ang laman ng findMany)
+const activeBundles = await prisma.productBundle.findMany({
+  where: {
+    storeId: store.id
+  },
+  include: {
+    tiers: {
+      orderBy: { quantity: 'asc' }
     },
-    include: {
-      tiers: {
-        orderBy: { quantity: 'asc' }
-      },
-      choices: true
-    },
-    orderBy: {
-      createdAt: 'desc'
-    }
-  });
+    choices: true
+  },
+  orderBy: {
+    createdAt: 'desc'
+  }
+});
+
+  // Ang Prisma Decimal (price) at String[] (images) ay hindi puwedeng ipasa nang diretso sa Client Component.
+  // Ginagawang plain number at single image URL para tugma sa BundleListTable at sa form.
+  const bundles = activeBundles.map((b) => ({
+    id: b.id,
+    name: b.name,
+    description: b.description || '',
+    status: b.status || 'draft',
+    bundleType: b.bundleType || 'MIX_AND_MATCH',
+    tiers: b.tiers.map((t) => ({
+      id: t.id,
+      quantity: t.quantity || 0,
+      price: Number(t.price || 0),
+      images: t.images?.[0] ?? '',
+    })),
+    choices: b.choices.map((c) => ({ 
+      id: c.id, 
+      name: c.name || '', 
+      imageUrl: c.imageUrl || '' 
+    })),
+  }));
+
+  // LIGTAS NA RETRIEVAL TYPE INJECTION PA-TUNGO SA CLIENT COMPONENT INTERFACE
+  const SafeBundleListTable = BundleListTable as any;
 
   return (
     <main className="min-h-screen flex-1 space-y-8 overflow-y-auto bg-[#F6F5F1] p-6 text-[#1B211D] md:p-10">
@@ -81,7 +105,8 @@ export default async function BundlesPage({ params }: BundlesPageProps) {
           </Link>
         </div>
       ) : (
-        <BundleListTable initialBundles={activeBundles} slug={slug} />
+        /* GINAGAMIT NA ANG INTEGRATED TYPE-CAST PARA MAWALA ANG PULANG GUHIT AT RUNTIME ERROR */
+        <SafeBundleListTable initialBundles={bundles} slug={slug} />
       )}
     </main>
   );

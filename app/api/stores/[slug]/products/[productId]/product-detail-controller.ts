@@ -6,7 +6,6 @@ import { getCloudinaryPublicId } from "@/lib/cloudinary-utils";
 
 /**
  * Service para sa Ligtas na Pag-Update ng Produkto (PATCH)
- * Kasama ang automated Cloudinary cleanup loop at Prisma database batch transaction reconciliation via SKU layer.
  */
 export async function updateProductDetailService(productId: string, body: any) {
   const { slug, name, description, categoryId, status, images, variants } = body;
@@ -42,7 +41,7 @@ export async function updateProductDetailService(productId: string, body: any) {
     }
   }
 
-  // 3. CORE DATABASE BATCH TRANSACTION (Nalinis na para sa Single Product)
+  // 3. CORE DATABASE BATCH TRANSACTION
   return await prisma.$transaction(async (tx: any) => {
     // A. I-update ang pangunahing impormasyon ng produkto
     const prod = await tx.product.update({
@@ -50,45 +49,39 @@ export async function updateProductDetailService(productId: string, body: any) {
       data: {
         name,
         description,
-        categoryId: categoryId || null,
+        // 🟢 HOTFIX: Ginawang fallback ang existing kung walang pinadalang bago para iwas Prisma validation crash
+        categoryId: categoryId || existingProduct.categoryId, 
         status,
         images
       }
     });
 
-    // B. RECONCILE VARIANTS VIA SKU LAYER
-    const currentDbVariants = await tx.productVariant.findMany({
-      where: { productId }
-    });
-
-    const incomingSkus = variants.map((v: any) => v.sku.trim());
-    const variantsToDelete = currentDbVariants.filter(
-      (dbV: any) => !incomingSkus.includes(dbV.sku)
-    );
-
-    if (variantsToDelete.length > 0) {
+    // B. SAFE RECONCILE VARIANTS (Wipe and Re-create Method para sa SKU Safety)
+    // Para maiwasan ang P2002 unique constraint error kapag nagkaroon ng halo-halong edit ng SKUs ang mga tenant,
+    // mas malinis at mabilis na i-delete ang lumang variants ng produktong ito at i-insert ang mga bago.
+    if (variants && variants.length > 0) {
       await tx.productVariant.deleteMany({
-        where: {
-          id: { in: variantsToDelete.map((v: any) => v.id) }
-        }
+        where: { productId: productId }
       });
-    }
 
-    for (const variant of variants) {
-      await tx.productVariant.upsert({
-        where: { sku: variant.sku.trim() },
-        update: {
-          name: variant.name || "Standard",
-          price: variant.price,
-          stock: variant.stock
-        },
-        create: {
+      // SKU Enforcement para sa mga ina-update na variants
+      const cleanStorePrefix = slug.replace(/[^a-zA-Z0-9]/g, '').toUpperCase().substring(0, 4);
+      
+      const variantsToCreate = variants.map((v: any) => {
+        const rawSku = v.sku.trim().toUpperCase();
+        const securedSku = rawSku.startsWith(cleanStorePrefix) ? rawSku : `${cleanStorePrefix}-${rawSku}`;
+        
+        return {
           productId: productId,
-          sku: variant.sku.trim(),
-          name: variant.name || "Standard",
-          price: variant.price,
-          stock: variant.stock
-        }
+          sku: securedSku,
+          name: v.name || "Standard",
+          price: v.price,
+          stock: v.stock
+        };
+      });
+
+      await tx.productVariant.createMany({
+        data: variantsToCreate
       });
     }
 
@@ -98,7 +91,6 @@ export async function updateProductDetailService(productId: string, body: any) {
 
 /**
  * Service para sa Kabuuang Pagbura ng Produkto (DELETE)
- * Permanenteng nililinis ang lahat ng image assets sa Cloudinary bago kalasin ang database product records (Cascade).
  */
 export async function deleteProductDetailService(productId: string, slug: string) {
   // 1. TENANT SECURITY CHECK & EXTRACTION

@@ -1,8 +1,9 @@
  // app/(dashboard)/dashboard/[slug]/products/bundles/[bundleId]/page.tsx
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { ChevronLeft, Package } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
 import { prisma } from "@/lib/prisma";
+import BundleForm from '@/components/dashboard/products/bundles/BundleForm';
 
 interface BundleIdPageProps {
   params: Promise<{
@@ -17,25 +18,50 @@ export default async function BundleIdPage({ params }: BundleIdPageProps) {
   // 1. TENANT SECURITY CHECK
   const store = await prisma.store.findUnique({
     where: { slug },
-    select: { id: true }
+    select: { id: true, name: true }
   });
 
   if (!store) return notFound();
 
-  // 2. KUNIN ANG SPECIFIC BUNDLE RECORD
-  // Gumagamit ng storeId para sa tenant data isolation
+  // 2. KUNIN ANG BUNDLE (storeId para sa tenant isolation)
+  // INAYOS: wala nang 'includedProducts' (wala sa schema). tiers at choices ang tamang relations.
   const bundle = await prisma.productBundle.findFirst({
     where: {
       id: bundleId,
       storeId: store.id
+    },
+    include: {
+      tiers: { orderBy: { quantity: 'asc' } },
+      choices: true
     }
   });
 
   if (!bundle) return notFound();
 
+  // 3. I-MAP SA SHAPE NG FORM (BundleFormProps['initialData'])
+  // Decimal -> number, String[] -> isang URL string
+  const initialData = {
+    id: bundle.id,
+    name: bundle.name,
+    description: bundle.description,
+    status: bundle.status,
+    bundleType: bundle.bundleType,
+    tiers: bundle.tiers.map((t) => ({
+      id: t.id,
+      quantity: t.quantity,
+      price: Number(t.price),
+      images: t.images?.[0] ?? '',
+    })),
+    choices: bundle.choices.map((c) => ({
+      id: c.id,
+      name: c.name,
+      imageUrl: c.imageUrl,
+    })),
+  };
+
   return (
-    <main className="min-h-screen bg-[#F6F5F1] px-4 py-8 text-[#1B211D] md:px-10">
-      <div className="mx-auto w-full max-w-5xl space-y-6">
+    <main className="min-h-screen flex-1 space-y-8 overflow-y-auto bg-[#F6F5F1] p-6 text-[#1B211D] md:p-10">
+      <div className="mx-auto max-w-6xl space-y-4 border-b border-[#1B211D]/10 pb-6">
         <Link
           href={`/dashboard/${slug}/products/bundles`}
           className="group inline-flex select-none items-center gap-1.5 text-sm font-medium text-[#1B211D]/60 transition-colors hover:text-[#1B211D]"
@@ -44,21 +70,15 @@ export default async function BundleIdPage({ params }: BundleIdPageProps) {
           <span>Back to bundles</span>
         </Link>
 
-        <div className="space-y-1.5 border-b border-[#1B211D]/10 pb-6">
+        <div className="space-y-1.5">
           <h1 className="font-display text-2xl font-bold tracking-tight md:text-3xl">Edit bundle</h1>
-          <p className="text-sm text-[#1B211D]/55">Modify your wholesale bundle configuration here.</p>
-        </div>
-
-        <div className="flex items-center gap-4 rounded-2xl border border-[#1B211D]/10 bg-white p-5 shadow-sm">
-          <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#F6F5F1] text-[#1B211D]/50">
-            <Package size={20} />
-          </span>
-          <div className="min-w-0">
-            <p className="text-xs text-[#1B211D]/45">Bundle</p>
-            <p className="truncate text-base font-semibold text-[#1B211D]">{bundle.name}</p>
-          </div>
+          <p className="max-w-2xl text-sm text-[#1B211D]/55">
+            Update tiers, photos and choices. The preview on the right shows how it looks on your store.
+          </p>
         </div>
       </div>
+
+      <BundleForm slug={slug} storeName={store.name} initialData={initialData} />
     </main>
   );
 }

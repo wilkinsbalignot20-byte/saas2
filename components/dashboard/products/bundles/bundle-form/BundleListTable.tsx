@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Edit, Package, Layers, Boxes, LayoutGrid, Inbox } from 'lucide-react';
 
 interface BundleListTableProps {
-  initialBundles: any[];
+  initialBundles: any;
   slug: string;
 }
 
@@ -16,25 +16,29 @@ export default function BundleListTable({ initialBundles, slug }: BundleListTabl
   // FILTER TABS STATE: ALL, MIX_AND_MATCH, o FIXED_PACKAGE
   const [activeTab, setActiveTab] = useState<'ALL' | 'MIX_AND_MATCH' | 'FIXED_PACKAGE'>('ALL');
 
-  // Salain ang mga records base sa pinindot na tab
-  const filteredBundles = initialBundles.filter((bundle) => {
+  // 🌟 MAXIMUM SAFETY GUARD: Sinisigurong array ang data bago gamitan ng .filter() o .map()
+  const safeBundles = Array.isArray(initialBundles) ? initialBundles : [];
+
+  // Salain ang mga records base sa pinindot na tab gamit ang safe array
+  const filteredBundles = safeBundles.filter((bundle) => {
     if (activeTab === 'ALL') return true;
-    return bundle.bundleType === activeTab;
+    return bundle?.bundleType === activeTab;
   });
 
   const tabs = [
-    { key: 'ALL' as const, label: 'All bundles', icon: null, count: initialBundles.length },
+    { key: 'ALL' as const, label: 'All bundles', icon: null, count: safeBundles.length },
     {
       key: 'MIX_AND_MATCH' as const,
       label: 'Mix & match',
       icon: <LayoutGrid size={13} />,
-      count: initialBundles.filter((b) => b.bundleType === 'MIX_AND_MATCH').length,
+      count: safeBundles.filter((b) => b?.bundleType === 'MIX_AND_MATCH').length,
     },
     {
       key: 'FIXED_PACKAGE' as const,
       label: 'Pre-packed',
       icon: <Boxes size={13} />,
-      count: initialBundles.filter((b) => b.bundleType === 'FIXED_PACKAGE').length,
+      /* 🟢 FIXED: Ginawa nang safeBundles para hindi mag-crash kapag loading */
+      count: safeBundles.filter((b) => b?.bundleType === 'FIXED_PACKAGE').length,
     },
   ];
 
@@ -92,10 +96,21 @@ export default function BundleListTable({ initialBundles, slug }: BundleListTabl
               </thead>
               <tbody className="divide-y divide-[#1B211D]/5 text-sm">
                 {filteredBundles.map((bundle: any) => {
-                  const firstTierWithImage = bundle.tiers.find((t: any) => t.images);
-                  const displayImage = firstTierWithImage ? firstTierWithImage.images : null;
+                  // 🟢 SAFETY NETS & STRING CLEANUP
+                  const firstTierWithImage = bundle?.tiers?.find((t: any) => t.images);
+                  let displayImage = firstTierWithImage ? firstTierWithImage.images : null;
 
-                  const tierPrices = bundle.tiers.map((t: any) => Number(t.price));
+                  // 🟢 INAYOS: Linisin ang string sakaling ito ay may naunang ["url"] formatting arrays galing sa DB
+                  if (displayImage && displayImage.startsWith('[')) {
+                    try {
+                      const parsed = JSON.parse(displayImage);
+                      displayImage = Array.isArray(parsed) ? parsed[0] : displayImage;
+                    } catch {
+                      displayImage = displayImage.replace(/[\[\]"]/g, '');
+                    }
+                  }
+
+                  const tierPrices = bundle?.tiers?.map((t: any) => Number(t.price)) || [];
                   const minPrice = tierPrices.length > 0 ? Math.min(...tierPrices) : 0;
                   const maxPrice = tierPrices.length > 0 ? Math.max(...tierPrices) : 0;
 
@@ -137,22 +152,22 @@ export default function BundleListTable({ initialBundles, slug }: BundleListTabl
                         <div className="flex flex-col gap-0.5">
                           <span className="flex items-center gap-1.5 text-xs font-semibold text-[#1B211D]/80">
                             <Layers size={12} className="text-[#1B211D]/40" />
-                            {bundle.tiers.length} price {bundle.tiers.length === 1 ? 'tier' : 'tiers'}
+                            {bundle?.tiers?.length || 0} price {bundle?.tiers?.length === 1 ? 'tier' : 'tiers'}
                           </span>
                           {bundle.bundleType === 'MIX_AND_MATCH' && (
                             <span className="text-[11px] text-[#1B211D]/45">
-                              {bundle.choices?.length || 0} selectable options
+                              {bundle?.choices?.length || 0} selectable options
                             </span>
                           )}
                         </div>
                       </td>
 
                       <td className="px-4 py-4 font-semibold text-[#1B211D]">
-                        {bundle.tiers.length > 1 ? (
+                        {(bundle?.tiers?.length || 0) > 1 ? (
                           <span>
                             {peso(minPrice)} – {peso(maxPrice)}
                           </span>
-                        ) : bundle.tiers.length === 1 ? (
+                        ) : bundle?.tiers?.length === 1 ? (
                           <span>{peso(minPrice)}</span>
                         ) : (
                           <span className="text-xs font-normal text-[#1B211D]/40">₱0.00</span>
