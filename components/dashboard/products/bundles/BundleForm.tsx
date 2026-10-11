@@ -1,274 +1,346 @@
-'use client';
+ 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { ImagePlus, Loader2, Save, Trash2 } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { Loader2, Save, Plus, Trash2, Layers, Boxes, LayoutGrid, Tag, AlertCircle, Check, Store } from 'lucide-react';
+import type { BundleFormProps } from './bundle-form/types';
+import { useBundleForm } from './bundle-form/useBundleForm';
+import PhotoUploader from './bundle-form/PhotoUploader';
+import BundlePreviewCard from './bundle-form/BundlePreviewCard';
 
-interface VariantInfo {
-  id: string;
-  name: string;
-  price: any; // Binago para tanggapin ang Decimal object ng Prisma
-  sku: string;
-}
+const inputCls =
+  'w-full rounded-lg border border-[#1B211D]/10 bg-white px-3.5 py-2.5 text-sm text-[#1B211D] placeholder:text-[#1B211D]/35 outline-none transition focus:border-[#1B211D] focus:ring-4 focus:ring-[#1B211D]/5';
+const labelCls = 'block text-xs font-semibold text-[#1B211D]/70';
+const ghostBtnCls =
+  'inline-flex cursor-pointer select-none items-center gap-1.5 rounded-lg border border-[#1B211D]/10 bg-white px-3 py-2 text-xs font-semibold text-[#1B211D] transition hover:bg-[#F6F5F1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1B211D]';
 
-interface ProductInfo {
-  id: string;
-  name: string;
-  images: string[]; // Ginawang string array
-  variants: VariantInfo[]; // Idinagdag ang array marker []
-}
-
-interface BundleFormProps {
-  availableProducts: ProductInfo[]; // Idinagdag ang array marker []
-  slug: string;
-  storeName: string;
-  initialData?: any;
-}
-
-export default function BundleForm({ availableProducts, slug, storeName, initialData }: BundleFormProps) {
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
-
-  // 1. BASIC FORM STATES FOR BUNDLE
-  const [name, setName] = useState(initialData?.name || '');
-  const [quantity, setQuantity] = useState(initialData?.quantity?.toString() || '3');
-  const [price, setPrice] = useState(initialData?.price?.toString() || '0.00');
-  const [imageUrl, setImageUrl] = useState<string>(initialData?.images?.[0] || '');
-
-  // 2. PRODUCT PICKER CHECKLIST STATE (Array ng mga Product IDs na isasama sa Bundle)
-  const [selectedProductIds, setSelectedProductIds] = useState<string[]>(
-    initialData?.productIds || []
+function SectionCard({
+  icon,
+  title,
+  description,
+  action,
+  children,
+}: {
+  icon: ReactNode;
+  title: string;
+  description?: string;
+  action?: ReactNode;
+  children: ReactNode;
+}) {
+  return (
+    <section className="overflow-hidden rounded-2xl border border-[#1B211D]/10 bg-white shadow-sm">
+      <header className="flex flex-wrap items-start justify-between gap-3 border-b border-[#1B211D]/5 px-5 py-4 sm:px-6">
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[#F6F5F1] text-[#1B211D]">
+            {icon}
+          </span>
+          <div className="space-y-0.5">
+            <h2 className="text-base font-semibold text-[#1B211D]">{title}</h2>
+            {description && <p className="max-w-xl text-xs leading-relaxed text-[#1B211D]/50">{description}</p>}
+          </div>
+        </div>
+        {action}
+      </header>
+      <div className="p-5 sm:p-6">{children}</div>
+    </section>
   );
+}
 
-  // Function para i-toggle ang pagpili sa checklist block matrix
-  const handleToggleProduct = (productId: string) => {
-    setSelectedProductIds((prev) =>
-      prev.includes(productId)
-        ? prev.filter((id) => id !== productId)
-        : [...prev, productId]
-    );
-  };
+export default function BundleForm({ slug, storeName, initialData }: BundleFormProps) {
+  const form = useBundleForm(slug, initialData);
 
-  // Mock upload hook helper (I-replace ito mamaya gamit ang iyong CldUploadWidget o dynamic uploader workflow)
-  const handleUploadGroupPhoto = () => {
-    const mockUrl = prompt("Paki-paste muna ang image URL para sa group photo ng iyong Bundle package:");
-    if (mockUrl) setImageUrl(mockUrl);
-  };
-
-  // 3. FRONTEND SUBMIT DISPATCH LAYER
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setErrorMessage('');
-
-    if (!name.trim()) {
-      setErrorMessage('Please provide a valid bundle package promotion title.');
-      setLoading(false);
-      return;
-    }
-
-    if (selectedProductIds.length === 0) {
-      setErrorMessage('Please check and select at least one individual product item to group into this bundle.');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      // Dito natin ipadadala ang data sa bagong isolated bundles endpoint controller natin mamaya
-      const apiUrl = initialData?.id 
-        ? `/api/stores/${slug}/products/bundles/${initialData.id}`
-        : `/api/stores/${slug}/products/bundles`;
-
-      const method = initialData?.id ? 'PATCH' : 'POST';
-
-      const res = await fetch(apiUrl, {
-        method: method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: name.trim(),
-          quantity: parseInt(quantity, 10) || 1,
-          price: parseFloat(price) || 0,
-          images: imageUrl ? [imageUrl] : [],
-          productIds: selectedProductIds, // Ipinapasa ang array ng mga naka-tag na inventory items
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Server rejected bundle configuration data sync.');
-      }
-
-      router.push(`/dashboard/${slug}/products/bundles`);
-      router.refresh();
-    } catch (err: any) {
-      setErrorMessage(err.message || 'Something went wrong while saving the wholesale package bundle.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const strategies = [
+    {
+      value: 'MIX_AND_MATCH',
+      title: 'Mix & match bundle',
+      body: 'Buyers pick their own combination of items, up to the tier quantity.',
+      icon: <LayoutGrid size={18} />,
+    },
+    {
+      value: 'FIXED_PACKAGE',
+      title: 'Pre-packed box',
+      body: 'Sold as one complete set. Buyers check out without choosing items.',
+      icon: <Boxes size={18} />,
+    },
+  ];
 
   return (
-    <form onSubmit={handleSubmit} className="grid max-w-5xl gap-8 lg:grid-cols-[1fr_320px]">
-      
-      {/* KALIWA: INPUT FIELDS AND SELECTION MATRICES */}
-      <div className="space-y-8 min-w-0">
-        
-        {/* BANNER FOR FORM ERROR CONTROL VALIDATION */}
-        {errorMessage && (
-          <div className="p-4 bg-red-50 border border-red-200 text-red-600 rounded-xl text-sm font-medium animate-in fade-in duration-200">
-            {errorMessage}
+    <form onSubmit={form.handleSubmit} className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[minmax(0,1fr)_340px]">
+      {/* MAIN CONFIGURATOR */}
+      <div className="min-w-0 space-y-6">
+        {form.errorMessage && (
+          <div
+            role="alert"
+            className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700 animate-in fade-in duration-200"
+          >
+            <AlertCircle size={18} className="mt-0.5 shrink-0" />
+            <p className="font-medium">{form.errorMessage}</p>
           </div>
         )}
 
-        {/* 📦 STEP A: BASIC DETAILS CONTROL BOX PANEL */}
-        <div className="rounded-2xl border border-[#1B211D]/5 bg-white p-6 shadow-sm space-y-6">
-          <h2 className="text-base font-bold text-[#1B211D] border-b border-[#1B211D]/5 pb-3">
-            Bundle Promotion Criteria
-          </h2>
-          
-          <div className="grid gap-6 sm:grid-cols-2">
-            <div className="space-y-2 sm:col-span-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-[#1B211D]/60">Bundle Package Name *</label>
-              <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g., Ultimate Flavor Trio Pack, Buy 5 promo mix"
-                className="w-full px-4 py-2.5 text-sm rounded-xl border border-[#1B211D]/10 bg-transparent placeholder-[#1B211D]/30 focus:border-[#1B211D] outline-none transition-all"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-[#1B211D]/60">Required Quantity (Pcs)</label>
-              <input
-                type="number"
-                min="1"
-                value={quantity}
-                onChange={(e) => setQuantity(e.target.value)}
-                placeholder="3"
-                className="w-full px-4 py-2.5 text-sm rounded-xl border border-[#1B211D]/10 bg-transparent focus:border-[#1B211D] outline-none transition-all"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-[#1B211D]/60">Wholesale Package Price</label>
-              <div className="relative flex items-center">
-                <span className="absolute left-4 text-[#1B211D]/40 text-sm font-semibold select-none">₱</span>
-                <input
-                  type="text"
-                  value={price}
-                  onChange={(e) => setPrice(e.target.value)}
-                  placeholder="0.00"
-                  className="w-full pl-8 pr-4 py-2.5 text-sm rounded-xl border border-[#1B211D]/10 bg-transparent focus:border-[#1B211D] outline-none transition-all"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* 🎯 STEP B: THE KULANG LAYER - PRODUCT CHECKLIST MATRIX PICKER */}
-        <div className="rounded-2xl border border-[#1B211D]/5 bg-white p-6 shadow-sm space-y-6">
-          <div>
-            <h2 className="text-base font-bold text-[#1B211D]">Tag Included Catalog Inventory</h2>
-            <p className="text-xs text-[#1B211D]/50 mt-0.5">
-              Check all the active storefront single products that can be selected or included in this wholesale group bundle pack.
-            </p>
-          </div>
-
-          {availableProducts.length === 0 ? (
-            <div className="text-center py-8 border border-dashed border-[#1B211D]/10 rounded-xl bg-[#F6F5F1]/30">
-              <p className="text-sm text-[#1B211D]/40 font-medium">No active storefront products available to group.</p>
-            </div>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 max-h-[350px] overflow-y-auto pr-2">
-              {availableProducts.map((product) => {
-                const isChecked = selectedProductIds.includes(product.id);
-                return (
-                  <div
-                    key={product.id}
-                    onClick={() => handleToggleProduct(product.id)}
-                    className={`flex items-center gap-4 p-4 rounded-xl border cursor-pointer select-none transition-all ${
-                      isChecked
-                        ? 'border-[#1B211D] bg-[#1B211D]/5 ring-1 ring-[#1B211D]'
-                        : 'border-[#1B211D]/10 hover:border-[#1B211D]/30 bg-transparent'
+        {/* PACKAGING STRATEGY */}
+        <SectionCard
+          icon={<Layers size={16} />}
+          title="Packaging strategy"
+          description="Choose whether buyers mix their own items or buy a fixed, pre-packed set."
+        >
+          <div role="radiogroup" aria-label="Packaging strategy" className="grid gap-3 sm:grid-cols-2">
+            {strategies.map((s) => {
+              const active = form.bundleType === s.value;
+              return (
+                <button
+                  key={s.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={active}
+                  onClick={() => form.setBundleType(s.value)}
+                  className={`relative flex cursor-pointer select-none items-start gap-3 rounded-xl border p-4 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1B211D] ${
+                    active
+                      ? 'border-[#1B211D] bg-[#1B211D]/[0.03] ring-1 ring-[#1B211D]'
+                      : 'border-[#1B211D]/10 hover:border-[#1B211D]/30'
+                  }`}
+                >
+                  <span
+                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
+                      active ? 'bg-[#1B211D] text-white' : 'bg-[#F6F5F1] text-[#1B211D]/60'
                     }`}
                   >
-                    {/* CUSTOM CHECKBOX LAYER INDICATOR */}
-                    <div className={`w-4 h-4 rounded flex items-center justify-center border transition-all ${
-                      isChecked ? 'bg-[#1B211D] border-[#1B211D]' : 'border-[#1B211D]/20'
-                    }`}>
-                      {isChecked && <div className="w-1.5 h-1.5 bg-white rounded-sm" />}
-                    </div>
+                    {s.icon}
+                  </span>
+                  <span className="space-y-1 pr-6">
+                    <span className="block text-sm font-semibold text-[#1B211D]">{s.title}</span>
+                    <span className="block text-xs leading-relaxed text-[#1B211D]/50">{s.body}</span>
+                  </span>
+                  {active && (
+                    <span className="absolute right-3 top-3 flex h-5 w-5 items-center justify-center rounded-full bg-[#1B211D] text-white">
+                      <Check size={12} />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </SectionCard>
 
-                    <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-[#1B211D] truncate">{product.name}</p>
-                      <p className="text-xs text-[#1B211D]/40 truncate">
-                        {product.variants?.length || 0} active variations linked
+        {/* CAMPAIGN SETTINGS */}
+        <SectionCard icon={<Tag size={16} />} title="Bundle details" description="The name and description buyers see on your store.">
+          <div className="space-y-5">
+            <div className="space-y-1.5">
+              <label className={labelCls}>Bundle name</label>
+              <input
+                type="text"
+                value={form.name}
+                onChange={(e) => form.setName(e.target.value)}
+                placeholder="e.g., Sachet Mega Pack Choice Deal"
+                className={inputCls}
+              />
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label className={labelCls}>Description</label>
+                <span className="text-[11px] text-[#1B211D]/40">Optional</span>
+              </div>
+              <textarea
+                value={form.description}
+                onChange={(e) => form.setDescription(e.target.value)}
+                placeholder="Explain how customers can pick and mix their items..."
+                rows={3}
+                className={`${inputCls} resize-none`}
+              />
+            </div>
+          </div>
+        </SectionCard>
+
+        {/* PRICING TIERS */}
+        <SectionCard
+          icon={<Layers size={16} />}
+          title="Pricing & package tiers"
+          description="Each tier has its own quantity, price and product photo. Tip: add a Qty 1 tier to show the savings on bigger packs."
+          action={
+            <button type="button" onClick={form.handleAddTier} className={ghostBtnCls}>
+              <Plus size={14} />
+              <span>Add tier</span>
+            </button>
+          }
+        >
+          <div className="space-y-4">
+            {form.tiers.map((tier, index) => {
+              const perPiece = tier.quantity > 0 && tier.price > 0 ? tier.price / tier.quantity : 0;
+              return (
+                <div
+                  key={index}
+                  className="rounded-xl border border-[#1B211D]/10 bg-[#F6F5F1]/30 p-4 animate-in fade-in slide-in-from-top-2 duration-200 sm:p-5"
+                >
+                  <div className="mb-4 flex items-center justify-between">
+                    <p className="text-sm font-semibold text-[#1B211D]">Tier {index + 1}</p>
+                    {form.tiers.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => form.handleRemoveTier(index)}
+                        aria-label={`Remove tier ${index + 1}`}
+                        className="inline-flex cursor-pointer items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium text-red-600 transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+                      >
+                        <Trash2 size={13} />
+                        <span>Remove</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid gap-5 sm:grid-cols-[168px_minmax(0,1fr)]">
+                    <PhotoUploader
+                      imageUrl={tier.images}
+                      alt={`Tier ${index + 1} product photo`}
+                      emptyLabel="Upload product photo"
+                      onUploaded={(url) => form.handleTierChange(index, 'images', url)}
+                    />
+
+                    <div className="space-y-4">
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-1.5">
+                          <label className={labelCls}>Quantity (pcs)</label>
+                          <input
+                            type="number"
+                            value={tier.quantity}
+                            onChange={(e) => form.handleTierChange(index, 'quantity', parseInt(e.target.value) || 0)}
+                            className={inputCls}
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className={labelCls}>Tier price</label>
+                          <div className="relative">
+                            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-[#1B211D]/40">
+                              ₱
+                            </span>
+                            <input
+                              type="number"
+                              value={tier.price || ''}
+                              onChange={(e) => form.handleTierChange(index, 'price', parseFloat(e.target.value) || 0)}
+                              placeholder="0.00"
+                              className={`${inputCls} pl-8`}
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between rounded-lg border border-[#1B211D]/5 bg-white px-3.5 py-2.5 text-xs">
+                        <span className="text-[#1B211D]/50">Price per piece</span>
+                        <span className="font-semibold text-[#1B211D]">
+                          {perPiece > 0
+                            ? `₱${perPiece.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                            : '—'}
+                        </span>
+                      </div>
+
+                      <p className="text-[11px] leading-relaxed text-[#1B211D]/40">
+                        {tier.images
+                          ? 'This photo is shown to buyers for this tier.'
+                          : 'A product photo is required for every tier.'}
                       </p>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
+                </div>
+              );
+            })}
+          </div>
+        </SectionCard>
 
-        {/* CONTROLLER ACTION FORM DISPATCH FOOTER */}
-        <div className="flex items-center justify-end gap-4 border-t border-[#1B211D]/5 pt-6">
+        {/* CHOICES (MIX & MATCH ONLY) */}
+        {form.bundleType === 'MIX_AND_MATCH' ? (
+          <div className="animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <SectionCard
+              icon={<LayoutGrid size={16} />}
+              title="Item choices"
+              description="Add the flavors, styles or variants buyers can mix into their bundle. Each choice needs a name and a photo."
+              action={
+                <button type="button" onClick={form.handleAddChoice} className={ghostBtnCls}>
+                  <Plus size={14} />
+                  <span>Add choice</span>
+                </button>
+              }
+            >
+              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+                {form.choices.map((choice, index) => (
+                  <div
+                    key={index}
+                    className="overflow-hidden rounded-xl border border-[#1B211D]/10 bg-white animate-in fade-in zoom-in-95 duration-150"
+                  >
+                    <div className="relative">
+                      <PhotoUploader
+                        imageUrl={choice.imageUrl}
+                        alt={choice.name || `Choice ${index + 1} photo`}
+                        emptyLabel="Upload photo"
+                        className="rounded-none border-0 border-b border-[#1B211D]/10"
+                        onUploaded={(url) => form.handleChoiceChange(index, 'imageUrl', url)}
+                      />
+                      {form.choices.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => form.handleRemoveChoice(index)}
+                          aria-label={`Remove choice ${index + 1}`}
+                          className="absolute right-2 top-2 cursor-pointer rounded-lg bg-white/95 p-1.5 text-red-600 shadow-sm backdrop-blur transition hover:bg-red-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
+                    </div>
+                    <div className="space-y-1.5 p-3">
+                      <label className={labelCls}>Choice name</label>
+                      <input
+                        type="text"
+                        value={choice.name}
+                        onChange={(e) => form.handleChoiceChange(index, 'name', e.target.value)}
+                        placeholder="e.g., Caramel"
+                        className={inputCls}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          </div>
+        ) : (
+          <div className="animate-in fade-in slide-in-from-top-1 space-y-2 rounded-2xl border border-dashed border-[#1B211D]/15 bg-white p-8 text-center duration-200">
+            <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-xl bg-[#F6F5F1] text-[#1B211D]/50">
+              <Boxes size={18} />
+            </div>
+            <p className="text-sm font-semibold text-[#1B211D]/70">No item choices needed</p>
+            <p className="mx-auto max-w-md text-xs leading-relaxed text-[#1B211D]/45">
+              This bundle is sold as a pre-packed box. Buyers check out the tier directly, so there's no selection step to set up.
+            </p>
+          </div>
+        )}
+
+        {/* ACTIONS */}
+        <div className="flex items-center justify-end gap-3 border-t border-[#1B211D]/10 pt-6">
           <button
             type="submit"
-            disabled={loading}
-            className="inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold rounded-xl text-white bg-[#1B211D] hover:bg-[#1B211D]/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all select-none shadow-sm"
+            disabled={form.loading}
+            className="inline-flex cursor-pointer select-none items-center justify-center gap-2 rounded-xl bg-[#1B211D] px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-[#1B211D]/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1B211D] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-            <span>{initialData?.id ? 'Update Package Bundle' : 'Save Package Bundle'}</span>
+            {form.loading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            <span>{initialData?.id ? 'Update bundle' : 'Save bundle'}</span>
           </button>
         </div>
-
       </div>
 
-      {/* KANAN: GROUP PHOTO PREVIEW ASSET SELECTION BOARD */}
-      <aside className="space-y-6 lg:sticky lg:top-6 self-start">
-        <div className="rounded-2xl border border-[#1B211D]/5 bg-white p-5 shadow-sm space-y-4">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[#1B211D]/60">Bundle Group Photo</h3>
-          
-          {imageUrl ? (
-            <div className="relative aspect-square w-full rounded-xl border border-[#1B211D]/10 overflow-hidden group">
-              <img 
-                src={imageUrl} 
-                alt="Bundle Preview" 
-                className="w-full h-full object-cover"
-              />
-              <button
-                type="button"
-                onClick={() => setImageUrl('')}
-                className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-xl text-white font-semibold text-xs gap-1.5"
-              >
-                <Trash2 size={14} />
-                <span>Remove Photo</span>
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={handleUploadGroupPhoto}
-              className="flex flex-col items-center justify-center gap-2 w-full aspect-square rounded-xl border border-dashed border-[#1B211D]/20 bg-[#F6F5F1]/50 hover:bg-[#F6F5F1] hover:border-[#1B211D]/40 transition-all select-none group"
-            >
-              <div className="p-3 rounded-xl bg-white border border-[#1B211D]/5 text-[#1B211D]/60 group-hover:text-[#1B211D] group-hover:scale-105 transition-all shadow-sm">
-                <ImagePlus size={20} />
-              </div>
-              <span className="text-xs font-bold text-[#1B211D]/60 group-hover:text-[#1B211D]">Upload Promo Picture</span>
-            </button>
-          )}
+      {/* SIDEBAR */}
+      <aside className="space-y-4 self-start lg:sticky lg:top-6">
+        <BundlePreviewCard
+          name={form.name}
+          bundleType={form.bundleType}
+          tiers={form.tiers}
+          choices={form.choices}
+        />
 
-          <p className="text-[11px] text-[#1B211D]/40 leading-relaxed">
-            Separate upload instance for promotional multi-flavor packs or mix-match deals display.
-          </p>
+        <div className="flex items-center gap-3 rounded-2xl border border-[#1B211D]/10 bg-white p-4 shadow-sm">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#F6F5F1] text-[#1B211D]/60">
+            <Store size={16} />
+          </span>
+          <div className="min-w-0">
+            <p className="text-[11px] text-[#1B211D]/45">Managing bundle for</p>
+            <p className="truncate text-sm font-semibold text-[#1B211D]">{storeName}</p>
+          </div>
         </div>
       </aside>
-
     </form>
   );
 }

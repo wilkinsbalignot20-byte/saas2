@@ -33,9 +33,6 @@ model Product {
   category    Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
   
   variants    ProductVariant[] // Dito nakakabit ang iyong inventory at SKU layer
-  
-  // 🌟 INAYOS: Kumokonekta na sa junction table para sa multi-product selection tags
-  bundleLinks BundleProduct[]
 
   @@map("products")
 }
@@ -58,37 +55,57 @@ model ProductVariant {
   @@map("product_variants")
 }
 
+// 🌟 PINAG-ISA AT INAYOS: Tinanggal ang duplicate card at isinama ang bagong choices array link block
 model ProductBundle {
-  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name        String   // Halimbawa: "Ultimate Flavor Trio Pack", "Buy 5 Promo Mix"
-  quantity    Int      @default(1) // Ilang pcs ang kailangang piliin ng customer (e.g., 3, 5 items)
-  price       Decimal  @default(0.00) @db.Decimal(10, 2) // Ang espesyal na package price para sa bundle na ito
-  images      String[] // 🌟 IDINAGDAG: Array ng Cloudinary URLs para sa group photo ng promo board
-  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  id          String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   
+  description String?             @db.Text
+  status      String              @default("draft") // "draft" o "published"
+  createdAt   DateTime            @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime            @updatedAt @map("updated_at") @db.Timestamptz
+  bundleType  String              @default("MIX_AND_MATCH") // "MIX_AND_MATCH" o "FIXED_PACKAGE"
 
   // RELATIONS
-  // 🌟 INAYOS: Kumokonekta na sa junction array framework para sa multi-product mapping records
-  includedProducts BundleProduct[]
-
-  // IDINAGDAG: Kailangan din natin i-tag kung aling store/tenant ang may-ari ng bundle promo code na ito
-  storeId     String   @map("store_id") @db.Uuid
-  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  storeId     String              @map("store_id") @db.Uuid
+  store       Store               @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  
+  // Pinapayagang sub-packages (Dito nakasalalay ang Bundle of 3, 5, atbp. na may sariling Cloudinary images)
+  tiers       ProductBundleTier[]
+  
+  // Ang mga standalone single item options (flavors/variants) na nilikha mismo sa loob ng bundle
+  choices     BundleItemChoice[]
 
   @@map("product_bundles")
 }
 
-// 🌟 BAGONG MODEL LAYER CONTEXT: Junction model para sa many-to-many product linkage orchestration
-model BundleProduct {
-  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  bundleId  String   @map("bundle_id") @db.Uuid
-  bundle    ProductBundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
-  
-  productId String   @map("product_id") @db.Uuid
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
-  
-  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+model ProductBundleTier {
+  id        String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  quantity  Int           // Dito ilalagay kung 3, 5, o kahit ilang piraso ang trip ng tenant
+  price     Decimal       @default(0.00) @db.Decimal(10, 2) // Ang presyo na itinakda ni tenant para sa tier na ito
+  images    String[]      // Cloudinary group photo para sa partikular na bundle size na ito
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime      @updatedAt @map("updated_at") @db.Timestamptz
 
-  @@unique([bundleId, productId])
-  @@map("bundle_products")
+  // RELATIONS
+  bundleId  String        @map("bundle_id") @db.Uuid
+  bundle    ProductBundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+
+  @@map("product_bundle_tiers")
 }
+
+model BundleItemChoice {
+  id          String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String        // Halimbawa: "Flavor Premium A", "Sachet Variant 1"
+  
+  // 🌟 INAYOS DITO: Idinagdag ang @map sa tabi ng imageUrl
+  imageUrl    String        @map("image_url") 
+  
+  createdAt   DateTime      @default(now()) @map("created_at") @db.Timestamptz
+
+  // RELATIONS
+  bundleId    String        @map("bundle_id") @db.Uuid
+  bundle      ProductBundle @relation(fields: [bundleId], references: [id], onDelete: Cascade)
+
+  @@map("bundle_item_choices")
+}
+
