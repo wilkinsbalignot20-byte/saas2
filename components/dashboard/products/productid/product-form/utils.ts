@@ -49,26 +49,42 @@ export function generateVariantCombinations(
   }));
 }
 
-/** Ang ipapadala sa API */
-export function buildProductPayload(slug: string, values: ProductFieldValues, variants: VariantInput[]) {
+/**
+ * Nagpapadala ng malinis na formatted package data para sa database operations (POST/PATCH)
+ */
+export function buildProductPayload(
+  slug: string, 
+  values: any, 
+  variants: any[],
+  bundles: any[] = [] // <-- ITONG BAGONG PARAMETER NA IDINAGDAG NATIN
+) {
   return {
     slug,
     name: values.name,
     description: values.description,
-    categoryId: values.categoryId || null,
-    newCategoryName: values.newCategoryName.trim() || null,
+    categoryId: values.categoryId,
+    newCategoryName: values.newCategoryName,
     status: values.status,
     images: values.images,
     variants: variants.map((v) => ({
-      name: v.name || "Standard",
-      sku: v.sku.trim(),
+      name: v.name,
+      sku: v.sku,
       price: parseFloat(v.price) || 0,
-      stock: parseInt(v.stock) || 0,
+      stock: parseInt(v.stock, 10) || 0,
+    })),
+    // 🌟 ITO ANG NAIHANDANG LAYER PARA SA MGA BUNDLES / WHOLESALE TIERS
+    bundles: bundles.map((b) => ({
+      id: b.id || undefined,
+      name: b.name.trim() || "Special Bundle",
+      quantity: parseInt(b.quantity, 10) || 1,
+      price: parseFloat(b.price) || 0,
     })),
   };
 }
 
-/** Live preview data (derived mula sa form state, walang extra state) */
+/**
+ * Nag-aayos ng parameters para sa live marketplace widget card preview board
+ */
 export function buildPreviewProps(
   values: ProductFieldValues,
   variants: VariantInput[],

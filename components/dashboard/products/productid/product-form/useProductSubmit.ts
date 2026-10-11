@@ -10,11 +10,12 @@ interface Options {
   productId?: string;
   values: ProductFieldValues;
   variants: VariantInput[];
+  bundles?: any[]; // 🌟 IDAGDAG ITO: Upang tanggapin ang bundles input array mula sa main form component
   setErrorMessage: (message: string) => void;
 }
 
 /** Validation, pag-save, at pagbura ng produkto (Multi-tenant safe) */
-export function useProductSubmit({ slug, productId, values, variants, setErrorMessage }: Options) {
+export function useProductSubmit({ slug, productId, values, variants, bundles = [], setErrorMessage }: Options) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -38,7 +39,6 @@ export function useProductSubmit({ slug, productId, values, variants, setErrorMe
     }
 
     try {
-      // ITINAMA ANG APIRURL: Ipinasok sa loob ng multi-tenant /api/stores/[slug]/products/...
       const apiUrl = productId 
         ? `/api/stores/${slug}/products/${productId}` 
         : `/api/stores/${slug}/products`;
@@ -48,7 +48,7 @@ export function useProductSubmit({ slug, productId, values, variants, setErrorMe
       const res = await fetch(apiUrl, {
         method: apiMethod,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(buildProductPayload(slug, values, variants)),
+        body: JSON.stringify(buildProductPayload(slug, values, variants, bundles)), // 🌟 IDAGDAG ANG bundles DITO: Ipinapasa na natin ang bundles array parameter sa payload builder natin
       });
 
       const responseData = await res.json();
@@ -77,7 +77,6 @@ export function useProductSubmit({ slug, productId, values, variants, setErrorMe
     setErrorMessage("");
 
     try {
-      // ITINAMA ANG DELETE URL: Tumuturo na sa tamang nest path at hindi na kailangan ang slug query string dahil bahagi na ito ng path!
       const res = await fetch(`/api/stores/${slug}/products/${productId}`, {
         method: "DELETE",
       });

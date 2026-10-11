@@ -31,6 +31,7 @@ export interface ProductFormProps {
     status: string;
     categoryId: string;
     variants: VariantInput[];
+    bundles: BundleInput[];
   };
 }
 
@@ -42,4 +43,11 @@ export interface ProductFieldValues {
   newCategoryName: string;
   status: string;
   images: string[];
+}
+
+export interface BundleInput {
+  id?: string;       // Opsyonal, para malaman kung umiiral na sa DB
+  name: string;      // Halimbawa: "Bundle of 3", "Family Pack"
+  quantity: string;  // Naka-string muna para sa state input form control layer
+  price: string;     // Convert string decimal para iwas rounding input format errors
 }

@@ -1,4 +1,4 @@
-// app/(dashboard)/dashboard/[slug]/products/[productId]/page.tsx
+ // app/(dashboard)/dashboard/[slug]/products/[productId]/page.tsx
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma"; 
 import ProductForm from "@/components/dashboard/products/productid/ProductForm"; 
@@ -15,6 +15,7 @@ export default async function ProductIdPage({ params }: ProductIdPageProps) {
   const { slug, productId } = await params;
 
   // 🛡️ TENANT ISOLATION GUARD: Kunin ang product at tiyaking pag-aari ito ng store slug na nasa URL
+  // 🛡️ TENANT ISOLATION GUARD: Kunin ang product at tiyaking pag-aari ito ng store slug na nasa URL
   const product = await prisma.product.findFirst({
     where: {
       id: productId,
@@ -26,6 +27,12 @@ export default async function ProductIdPage({ params }: ProductIdPageProps) {
       variants: {
         orderBy: {
           createdAt: "asc", 
+        },
+      },
+      // 🌟 IDAGDAG ITONG RELATIONS CONTEXT SA PRISMA FETCH:
+      bundles: {
+        orderBy: {
+          createdAt: "asc",
         },
       },
       store: {
@@ -68,6 +75,12 @@ export default async function ProductIdPage({ params }: ProductIdPageProps) {
       sku: variant.sku,
       price: variant.price.toString(), // In-align sa string format para sa state mo sa client side
       stock: variant.stock.toString(), // Convert string integer para iwas rounding crashes
+    })),
+    bundles: product.bundles.map((bundle: any) => ({
+      id: bundle.id,
+      name: bundle.name,
+      quantity: bundle.quantity.toString(),
+      price: bundle.price.toString(),
     })),
   };
 
