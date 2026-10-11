@@ -1,6 +1,7 @@
  'use client';
 
 import { useState } from 'react';
+import { Trash2 } from 'lucide-react'; // Idinagdag para sa magandang delete icon
 import BasicInfoSection from './BasicInfoSection';
 import VariantInventorySection from './VariantInventorySection';
 import ProductPreviewCard from './ProductPreviewCard';
@@ -14,7 +15,7 @@ import { useProductSubmit } from './product-form/useProductSubmit';
 import { buildPreviewProps } from './product-form/utils';
 import type { ProductFormProps } from './product-form/types';
 
-export default function ProductForm({ categories, slug, storeName, initialData }: ProductFormProps) {
+export default function ProductForm({ categories, slug, storeName, initialData, productId }: ProductFormProps & { productId?: string }) {
   const [errorMessage, setErrorMessage] = useState('');
 
   const fields = useProductFields(initialData);
@@ -25,8 +26,11 @@ export default function ProductForm({ categories, slug, storeName, initialData }
     onGenerate: variantState.setVariants,
     onError: setErrorMessage,
   });
-  const { submit, loading } = useProductSubmit({
+  
+  // Nakuha na natin dito ang 'deleteProduct' at 'isDeleting' para magamit sa UI control loop
+  const { submit, loading, deleteProduct, isDeleting } = useProductSubmit({
     slug,
+    productId,
     values: {
       name: fields.name,
       description: fields.description,
@@ -71,7 +75,27 @@ export default function ProductForm({ categories, slug, storeName, initialData }
           </div>
         </details>
 
-        <SaveButton loading={loading} />
+        {/* ACTION BUTTONS LAYER CONTAINER */}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-[#1B211D]/5 pt-6">
+          <div>
+            {/* Papakita lamang ang Delete button kung may productId (Ibig sabihin ay kasalukuyang ine-edit ang produkto) */}
+            {productId && (
+              <button
+                type="button"
+                onClick={deleteProduct}
+                disabled={loading || isDeleting}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold rounded-xl text-red-600 bg-red-50 hover:bg-red-100 disabled:opacity-50 disabled:cursor-not-allowed border border-red-200/40 transition-colors select-none"
+              >
+                <Trash2 size={16} />
+                <span>{isDeleting ? "Deleting Product..." : "Delete Product"}</span>
+              </button>
+            )}
+          </div>
+          
+          <div className="w-full sm:w-auto flex justify-end">
+            <SaveButton loading={loading || isDeleting} />
+          </div>
+        </div>
       </div>
 
       {/* RIGHT: LIVE PREVIEW (sticky sa desktop) */}

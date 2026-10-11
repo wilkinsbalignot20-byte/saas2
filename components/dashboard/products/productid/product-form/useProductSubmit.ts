@@ -1,5 +1,4 @@
-// components/dashboard/products/product-form/useProductSubmit.ts
-"use client";
+ "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -8,16 +7,19 @@ import type { ProductFieldValues, VariantInput } from "./types";
 
 interface Options {
   slug: string;
+  productId?: string;
   values: ProductFieldValues;
   variants: VariantInput[];
   setErrorMessage: (message: string) => void;
 }
 
-/** Validation at pag-save ng produkto papunta sa API */
-export function useProductSubmit({ slug, values, variants, setErrorMessage }: Options) {
+/** Validation, pag-save, at pagbura ng produkto (Multi-tenant safe) */
+export function useProductSubmit({ slug, productId, values, variants, setErrorMessage }: Options) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
+  // 1. SAVE / UPDATE LOGIC
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -36,8 +38,15 @@ export function useProductSubmit({ slug, values, variants, setErrorMessage }: Op
     }
 
     try {
-      const res = await fetch(`/api/stores/${slug}/products`, {
-        method: "POST",
+      // ITINAMA ANG APIRURL: Ipinasok sa loob ng multi-tenant /api/stores/[slug]/products/...
+      const apiUrl = productId 
+        ? `/api/stores/${slug}/products/${productId}` 
+        : `/api/stores/${slug}/products`;
+
+      const apiMethod = productId ? "PATCH" : "POST";
+
+      const res = await fetch(apiUrl, {
+        method: apiMethod,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(buildProductPayload(slug, values, variants)),
       });
@@ -57,5 +66,35 @@ export function useProductSubmit({ slug, values, variants, setErrorMessage }: Op
     }
   };
 
-  return { submit, loading };
+  // 2. FULL DELETION LOGIC (Cloudinary + Prisma Cascade)
+  const deleteProduct = async () => {
+    if (!productId) return;
+    
+    const confirmDelete = confirm("Are you sure you want to permanently delete this product and all its cloud images? This action cannot be undone.");
+    if (!confirmDelete) return;
+
+    setIsDeleting(true);
+    setErrorMessage("");
+
+    try {
+      // ITINAMA ANG DELETE URL: Tumuturo na sa tamang nest path at hindi na kailangan ang slug query string dahil bahagi na ito ng path!
+      const res = await fetch(`/api/stores/${slug}/products/${productId}`, {
+        method: "DELETE",
+      });
+
+      const responseData = await res.json();
+
+      if (!res.ok) {
+        throw new Error(responseData.error || "Failed to completely delete the product catalog.");
+      }
+
+      router.push(`/dashboard/${slug}/products`);
+      router.refresh();
+    } catch (err: any) {
+      setErrorMessage(err.message || "An error occurred while attempting product removal.");
+      setIsDeleting(false);
+    }
+  };
+
+  return { submit, loading, deleteProduct, isDeleting };
 }
