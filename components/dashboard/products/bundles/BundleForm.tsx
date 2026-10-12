@@ -184,10 +184,35 @@ export default function BundleForm({ slug, storeName, initialData }: BundleFormP
                       </button>
                     )}
                   </div>
-
+                  
                   <div className="grid gap-5 sm:grid-cols-[168px_minmax(0,1fr)]">
+
                     <PhotoUploader
-                      imageUrl={tier.images}
+                      imageUrl={
+                        (() => {
+                          const imgData = tier.images;
+                          if (!imgData) return '';
+                          
+                          // 1. Kung ito ay isang Native Array object
+                          if (Array.isArray(imgData)) {
+                            return imgData[0] || '';
+                          }
+                          
+                          // 2. Kung ito ay isang stringified JSON layout structure
+                          if (typeof imgData === 'string' && imgData.startsWith('[')) {
+                            try {
+                              const parsed = JSON.parse(imgData);
+                              return Array.isArray(parsed) ? (parsed[0] || '') : imgData;
+                            } catch {
+                              const cleaned = imgData.replace(/[\[\]"]/g, '');
+                              return cleaned.split(',')[0] || '';
+                            }
+                          }
+                          
+                          // 3. Standard fallback kung plain string domain link na agad ito
+                          return typeof imgData === 'string' ? imgData : '';
+                        })()
+                      }
                       alt={`Tier ${index + 1} product photo`}
                       emptyLabel="Upload product photo"
                       onUploaded={(url) => form.handleTierChange(index, 'images', url)}

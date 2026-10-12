@@ -15,7 +15,13 @@ interface BundleIdPageProps {
 export default async function BundleIdPage({ params }: BundleIdPageProps) {
   const { slug, bundleId } = await params;
 
-  // 1. TENANT SECURITY CHECK
+  // 1. UUID SECURITY CHECK
+  const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bundleId);
+  if (!isValidUUID) {
+    return notFound();
+  }
+
+  // 2. TENANT SECURITY CHECK
   const store = await prisma.store.findUnique({
     where: { slug },
     select: { id: true, name: true }
@@ -23,8 +29,7 @@ export default async function BundleIdPage({ params }: BundleIdPageProps) {
 
   if (!store) return notFound();
 
-  // 2. KUNIN ANG BUNDLE (storeId para sa tenant isolation)
-  // INAYOS: wala nang 'includedProducts' (wala sa schema). tiers at choices ang tamang relations.
+  // 3. KUNIN ANG BUNDLE (storeId para sa tenant isolation)
   const bundle = await prisma.productBundle.findFirst({
     where: {
       id: bundleId,
@@ -38,24 +43,48 @@ export default async function BundleIdPage({ params }: BundleIdPageProps) {
 
   if (!bundle) return notFound();
 
-  // 3. I-MAP SA SHAPE NG FORM (BundleFormProps['initialData'])
-  // Decimal -> number, String[] -> isang URL string
+  // 4. I-MAP SA SHAPE NG FORM (BundleFormProps['initialData'])
   const initialData = {
     id: bundle.id,
     name: bundle.name,
     description: bundle.description,
     status: bundle.status,
     bundleType: bundle.bundleType,
-    tiers: bundle.tiers.map((t) => ({
-      id: t.id,
-      quantity: t.quantity,
-      price: Number(t.price),
-      images: t.images?.[0] ?? '',
-    })),
+    tiers: bundle.tiers.map((t) => {
+      // Tiyakin muna natin kung ano ang hilaw na data structure mula sa schema
+      const rawImages = t.images;
+      let finalImageUrl = '';
+
+      if (Array.isArray(rawImages)) {
+        // Kung ito ay totoong Native Postgres Array
+        finalImageUrl = rawImages[0] || '';
+      } else if (typeof rawImages === 'string') {
+        // Kung ito ay JSON text string gaya ng '["https://..."]' o plain URL string
+        if (rawImages.startsWith('[')) {
+          try {
+            const parsed = JSON.parse(rawImages);
+            finalImageUrl = Array.isArray(parsed) ? parsed[0] : rawImages;
+          } catch {
+            // Backup parsing kapag may syntax breakage ang JSON data formatting string conversion
+            const cleaned = rawImages.replace(/[\[\]"]/g, '');
+            finalImageUrl = cleaned.split(',')[0] || '';
+          }
+        } else {
+          finalImageUrl = rawImages;
+        }
+      }
+
+      return {
+        id: t.id,
+        quantity: t.quantity,
+        price: Number(t.price),
+        images: finalImageUrl, // Ligtas na string URL na ang matatanggap ng PhotoUploader
+      };
+    }),
     choices: bundle.choices.map((c) => ({
       id: c.id,
       name: c.name,
-      imageUrl: c.imageUrl,
+      imageUrl: c.imageUrl || '',
     })),
   };
 

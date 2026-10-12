@@ -19,36 +19,65 @@ export default async function BundlesPage({ params }: BundlesPageProps) {
 
   if (!store) return notFound();
 
-// 🟢 TAMA (Isang buong object lang dapat ang laman ng findMany)
-const activeBundles = await prisma.productBundle.findMany({
-  where: {
-    storeId: store.id
-  },
-  include: {
-    tiers: {
-      orderBy: { quantity: 'asc' }
+  // 🟢 TAMA (Isang buong object lang dapat ang laman ng findMany)
+  const activeBundles = await prisma.productBundle.findMany({
+    where: {
+      storeId: store.id
     },
-    choices: true
-  },
-  orderBy: {
-    createdAt: 'desc'
-  }
-});
+    include: {
+      tiers: {
+        orderBy: { quantity: 'asc' }
+      },
+      choices: true
+    },
+    orderBy: {
+      createdAt: 'desc'
+    }
+  });
 
-  // Ang Prisma Decimal (price) at String[] (images) ay hindi puwedeng ipasa nang diretso sa Client Component.
-  // Ginagawang plain number at single image URL para tugma sa BundleListTable at sa form.
+  // Ang Prisma Decimal (price) ay hindi puwedeng ipasa nang diretso sa Client Component.
   const bundles = activeBundles.map((b) => ({
     id: b.id,
     name: b.name,
     description: b.description || '',
     status: b.status || 'draft',
     bundleType: b.bundleType || 'MIX_AND_MATCH',
-    tiers: b.tiers.map((t) => ({
-      id: t.id,
-      quantity: t.quantity || 0,
-      price: Number(t.price || 0),
-      images: t.images?.[0] ?? '',
-    })),
+    tiers: b.tiers.map((t) => {
+      // 🟢 PAG-AAYOS SA BUG: Kinuha ang t.images nang buo nang walang `[0]` para hindi maging letter "h" ang string URL
+      let rawImage: any = t.images ?? '';
+      let cleanImageUrl = '';
+
+      if (rawImage) {
+        // Kung ito ay nakatagong stringified JSON array o object galing sa DB text column
+        if (typeof rawImage === 'string' && (rawImage.startsWith('{') || rawImage.startsWith('['))) {
+          try {
+            const parsed = JSON.parse(rawImage);
+            // Kung array ang resulta ng parse, kunin ang unang element
+            rawImage = Array.isArray(parsed) ? parsed[0] : parsed;
+          } catch {
+            // No-op
+          }
+        } 
+        // Kung ito ay katutubong array mula sa PostgreSQL JSONB column
+        else if (Array.isArray(rawImage) && rawImage.length > 0) {
+          rawImage = rawImage[0];
+        }
+
+        // Pagkuha ng string URL kung ito ay naging object mula sa Cloudinary upload structure
+        if (typeof rawImage === 'object' && rawImage !== null) {
+          cleanImageUrl = rawImage.secure_url || rawImage.url || rawImage.image_url || Object.values(rawImage).find(v => typeof v === 'string') || '';
+        } else if (typeof rawImage === 'string') {
+          cleanImageUrl = rawImage;
+        }
+      }
+
+      return {
+        id: t.id,
+        quantity: t.quantity || 0,
+        price: Number(t.price || 0),
+        images: cleanImageUrl, // Garantisado nang buong Cloudinary link at hindi "h" lang!
+      };
+    }),
     choices: b.choices.map((c) => ({ 
       id: c.id, 
       name: c.name || '', 

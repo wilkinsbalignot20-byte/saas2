@@ -16,11 +16,14 @@ export default function BundleListTable({ initialBundles, slug }: BundleListTabl
   // FILTER TABS STATE: ALL, MIX_AND_MATCH, o FIXED_PACKAGE
   const [activeTab, setActiveTab] = useState<'ALL' | 'MIX_AND_MATCH' | 'FIXED_PACKAGE'>('ALL');
 
-  // 🌟 MAXIMUM SAFETY GUARD: Sinisigurong array ang data bago gamitan ng .filter() o .map()
+  // Sinisigurong array ang data bago gamitan ng .filter() o .map()
   const safeBundles = Array.isArray(initialBundles) ? initialBundles : [];
 
-  // Salain ang mga records base sa pinindot na tab gamit ang safe array
+  // 🟢 BALIDASYON: Tinanggal ang backslash para lumabas muli ang bundle records nang ligtas
   const filteredBundles = safeBundles.filter((bundle) => {
+    const isValidUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(bundle?.id || '');
+    if (!isValidUUID) return false;
+
     if (activeTab === 'ALL') return true;
     return bundle?.bundleType === activeTab;
   });
@@ -37,7 +40,6 @@ export default function BundleListTable({ initialBundles, slug }: BundleListTabl
       key: 'FIXED_PACKAGE' as const,
       label: 'Pre-packed',
       icon: <Boxes size={13} />,
-      /* 🟢 FIXED: Ginawa nang safeBundles para hindi mag-crash kapag loading */
       count: safeBundles.filter((b) => b?.bundleType === 'FIXED_PACKAGE').length,
     },
   ];
@@ -53,18 +55,13 @@ export default function BundleListTable({ initialBundles, slug }: BundleListTabl
               key={tab.key}
               type="button"
               onClick={() => setActiveTab(tab.key)}
-              aria-pressed={active}
               className={`flex flex-1 cursor-pointer select-none items-center justify-center gap-1.5 rounded-lg px-4 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#1B211D] sm:flex-initial ${
                 active ? 'bg-[#1B211D] text-white shadow-sm' : 'text-[#1B211D]/60 hover:bg-[#F6F5F1] hover:text-[#1B211D]'
               }`}
             >
               {tab.icon}
               <span>{tab.label}</span>
-              <span
-                className={`rounded-md px-1.5 py-0.5 text-[10px] ${
-                  active ? 'bg-white/20 text-white' : 'bg-[#1B211D]/5 text-[#1B211D]/70'
-                }`}
-              >
+              <span className={`rounded-md px-1.5 py-0.5 text-[10px] ${active ? 'bg-white/20 text-white' : 'bg-[#1B211D]/5 text-[#1B211D]/70'}`}>
                 {tab.count}
               </span>
             </button>
@@ -79,7 +76,6 @@ export default function BundleListTable({ initialBundles, slug }: BundleListTabl
             <Inbox size={18} />
           </div>
           <p className="text-sm font-semibold text-[#1B211D]/70">No bundles in this view</p>
-          <p className="text-xs text-[#1B211D]/45">Bundles you add under this type will show up here.</p>
         </div>
       ) : (
         <div className="animate-in fade-in overflow-hidden rounded-2xl border border-[#1B211D]/10 bg-white shadow-sm duration-200">
@@ -94,19 +90,58 @@ export default function BundleListTable({ initialBundles, slug }: BundleListTabl
                   <th className="w-[120px] px-5 py-3 text-right">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#1B211D]/5 text-sm">
+               <tbody className="divide-y divide-[#1B211D]/5 text-sm">
                 {filteredBundles.map((bundle: any) => {
-                  // 🟢 SAFETY NETS & STRING CLEANUP
-                  const firstTierWithImage = bundle?.tiers?.find((t: any) => t.images);
-                  let displayImage = firstTierWithImage ? firstTierWithImage.images : null;
+                  // 🟢 PAGKUHA NG LARAWAN: Mas matatag na paghahanap sa loob ng mga tier at objects
+                  let displayImage: any = null;
 
-                  // 🟢 INAYOS: Linisin ang string sakaling ito ay may naunang ["url"] formatting arrays galing sa DB
-                  if (displayImage && displayImage.startsWith('[')) {
-                    try {
-                      const parsed = JSON.parse(displayImage);
-                      displayImage = Array.isArray(parsed) ? parsed[0] : displayImage;
-                    } catch {
-                      displayImage = displayImage.replace(/[\[\]"]/g, '');
+                  // Iikot tayo sa lahat ng tiers para maghanap ng valid na larawan
+                  if (bundle?.tiers && Array.isArray(bundle.tiers)) {
+                    for (const tier of bundle.tiers) {
+                      let rawImages = tier.images;
+
+                      if (!rawImages) continue;
+
+                      // KUNG STRING: Suriin kung JSON o purong URL
+                      if (typeof rawImages === 'string') {
+                        const trimmed = rawImages.trim();
+                        if (trimmed === '') continue;
+
+                        if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+                          try {
+                            rawImages = JSON.parse(trimmed);
+                          } catch {
+                            // Kung sira ang JSON string, linisin ang mga brackets at kunin ang unang bahagi
+                            const cleanStr = trimmed.replace(/[\[\]"']/g, '').split(',')[0]?.trim();
+                            if (cleanStr) {
+                              displayImage = cleanStr;
+                              break;
+                            }
+                          }
+                        } else {
+                          // Kung purong string URL lang talaga, kunin agad
+                          displayImage = trimmed;
+                          break;
+                        }
+                      }
+
+                      // KUNG ARRAY: Kunin ang unang item (string man o object)
+                      if (Array.isArray(rawImages) && rawImages.length > 0) {
+                        const firstItem = rawImages[0];
+                        if (typeof firstItem === 'string') {
+                          displayImage = firstItem.trim();
+                          break;
+                        } else if (firstItem && typeof firstItem === 'object') {
+                          displayImage = firstItem.url || firstItem.image_url || Object.values(firstItem).find(v => typeof v === 'string');
+                          if (displayImage) break;
+                        }
+                      }
+
+                      // KUNG NAG-IISANG OBJECT: Extract ang url field sa loob
+                      if (typeof rawImages === 'object' && rawImages !== null) {
+                        displayImage = rawImages.url || rawImages.image_url || Object.values(rawImages).find(v => typeof v === 'string');
+                        if (displayImage) break;
+                      }
                     }
                   }
 
