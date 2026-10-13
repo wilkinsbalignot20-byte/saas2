@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import Navbar from '@/components/Homepage/about/Navbar';
 import Hero from '@/components/Homepage/Hero';
+import WhyManipu from '@/components/Homepage/WhyManipu';
 import FAQSection from '@/components/Homepage/FAQSection';
 // 🆕 INIMPORT ANG IYONG AI WIDGET COMPONENT
 import ChatWidget from '@/components/Homepage/chat-widget'; 
@@ -14,6 +15,9 @@ export default function SaasLandingPage() {
 
       {/* 2. HERO COMPONENT (May kasama nang Rotating Text sa loob!) */}
       <Hero />
+
+      {/* 2.5 WHY MANIPU (bagong section sa ilalim ng Hero) */}
+      <WhyManipu />
 
       {/* 3. AUDIENCES SECTION */}
       <section id="audiences" className="border-t border-ink/10">
