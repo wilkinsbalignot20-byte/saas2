@@ -8,7 +8,7 @@ export function ShopHeader() {
           Manipu <span className="text-ink/40 font-normal">Mall</span>
         </Link>
         <nav className="hidden md:flex items-center gap-8 text-sm font-medium text-ink/60">
-          <Link href="/explore" className="hover:text-ink transition-colors">Explore stores</Link>
+          <Link href="/shop/explore" className="hover:text-ink transition-colors">Explore stores</Link>
           <Link href="/deals" className="hover:text-ink transition-colors">Deals</Link>
           <Link href="/blog" className="hover:text-ink transition-colors">Blog</Link>
           <Link href="/about" className="hover:text-ink transition-colors">About</Link>
