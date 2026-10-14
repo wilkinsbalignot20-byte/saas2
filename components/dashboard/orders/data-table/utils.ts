@@ -20,11 +20,26 @@ export function filterAndSortOrders(orders: SerializedOrder[], opts: FilterOptio
 
   const rows = orders.filter((o) => {
     // 1. CASE-INSENSITIVE SEARCH FILTER MAPPING
+    // 🌟 LAYER UPDATE: Isinama natin ang pag-loop sa orderItems para maging searchable ang bundle attributes at product names
+    const matchesBundleOrProduct = o.orderItems.some((item) => {
+      const productNameMatch = item.productName.toLowerCase().includes(term);
+      const variantNameMatch = (item.variantName || "").toLowerCase().includes(term);
+      
+      // I-scan din ang bundle types at custom choice selections kung mayroon man
+      const bundleTypeMatch = item.isBundle && (item.bundleType || "").toLowerCase().replace("_", " ").includes(term);
+      const choicesMatch = item.selectedChoices?.some((choice) => 
+        choice.name.toLowerCase().includes(term)
+      );
+
+      return productNameMatch || variantNameMatch || !!bundleTypeMatch || !!choicesMatch;
+    });
+
     const matchesSearch =
       !term ||
       o.orderNumber.toLowerCase().includes(term) ||
       o.customerName.toLowerCase().includes(term) ||
-      o.customerEmail.toLowerCase().includes(term);
+      o.customerEmail.toLowerCase().includes(term) ||
+      matchesBundleOrProduct; // Isinama sa core validation block
 
     // Siguraduhing ligtas ang pag-evaluate sa pamamagitan ng uppercase conversion ng strings mula sa DB
     const shipping = (o.shippingStatus || "").toUpperCase();

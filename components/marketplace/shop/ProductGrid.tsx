@@ -1,7 +1,7 @@
  // components/marketplace/shop/ProductGrid.tsx
 'use client';
 
-import { ShoppingBag, Zap } from 'lucide-react';
+import { ShoppingBag, Zap, Layers } from 'lucide-react';
 
 interface ProductVariant {
   id: string;
@@ -22,7 +22,7 @@ interface BundleCampaign {
   type: string;
   rules?: any[];
   productId: string;
-  bundleType: 'bogo' | 'combo' | 'package';
+  bundleType: 'bogo' | 'combo' | 'package' | string;
   promoLabel?: string;
 }
 
@@ -54,7 +54,8 @@ export default function ProductGrid({ products, themeColor, bundles = [], flashS
         const matchingBundle = bundles.find((campaign: any) => 
           campaign.rules?.some((rule: any) => rule.productId === product.id)
         );
-        // Alamin kung Buy 1 Take 1 o Package Bundle ang uri ng kampanya
+        
+        // Alamin kung Buy 1 Take 1, Mix & Match, o Fixed Package ang uri ng kampanya
         const bundleType = matchingBundle?.type;
 
         let finalPrice = originalPrice;
@@ -89,6 +90,25 @@ export default function ProductGrid({ products, themeColor, bundles = [], flashS
 
         if (finalPrice < 0) finalPrice = 0;
 
+        // 🌟 LAYER UPDATE: Dynamic badge coloring at label mappings base sa active marketing setups mo
+        const isBogo = bundleType === "BUY_1_TAKE_1";
+        const isMixMatch = bundleType === "MIX_AND_MATCH";
+        const isFixedPackage = bundleType === "FIXED_PACKAGE";
+
+        let bundleBadgeLabel = "BUNDLE DEAL";
+        let bundleBadgeColor = "bg-indigo-600 ring-1 ring-indigo-500/30";
+
+        if (isBogo) {
+          bundleBadgeLabel = "BUY 1 TAKE 1";
+          bundleBadgeColor = "bg-purple-600 ring-1 ring-purple-500/30";
+        } else if (isMixMatch) {
+          bundleBadgeLabel = "MIX & MATCH";
+          bundleBadgeColor = "bg-emerald-600 ring-1 ring-emerald-500/30";
+        } else if (isFixedPackage) {
+          bundleBadgeLabel = "PROMO PACK";
+          bundleBadgeColor = "bg-blue-600 ring-1 ring-blue-500/30";
+        }
+
         return (
           <article
             key={product.id}
@@ -120,18 +140,12 @@ export default function ProductGrid({ products, themeColor, bundles = [], flashS
                 </div>
               )}
 
-              {/* BUNDLE / BOGO PROMO BADGE OVERLAY */}
+              {/* 🌟 BUNDLE / BOGO PROMO BADGE OVERLAY */}
               {matchingBundle && (
                 <div className="absolute top-2 right-2 z-10 animate-in fade-in zoom-in-95 duration-200">
-                  <span 
-                    className={`text-[9px] font-black uppercase tracking-wider text-white px-2 py-1 rounded-md shadow-sm flex items-center gap-1 backdrop-blur-xs ${
-                      bundleType === "BUY_1_TAKE_1" 
-                        ? "bg-purple-600 ring-1 ring-purple-500/30" 
-                        : "bg-indigo-600 ring-1 ring-indigo-500/30"
-                    }`}
-                  >
-                    <ShoppingBag size={10} />
-                    {bundleType === "BUY_1_TAKE_1" ? "BUY 1 TAKE 1" : "BUNDLE DEAL"}
+                  <span className={`text-[9px] font-black uppercase tracking-wider text-white px-2 py-1 rounded-md shadow-sm flex items-center gap-1 backdrop-blur-xs ${bundleBadgeColor}`}>
+                    {isMixMatch ? <Layers size={10} /> : <ShoppingBag size={10} />}
+                    {bundleBadgeLabel}
                   </span>
                 </div>
               )}
@@ -144,15 +158,27 @@ export default function ProductGrid({ products, themeColor, bundles = [], flashS
                 <p className="mt-1 text-sm text-[#1B211D]/55 line-clamp-2">{product.description}</p>
               )}
 
-              {/* ⚡ SLASH PRICE PRICE CONTAINER */}
+              {/* ⚡ SLASH PRICE CONTAINER */}
               <div className="mt-auto pt-4 flex items-baseline justify-between gap-2">
                 <div className="flex flex-col">
                   <span className="text-xs text-[#1B211D]/45 shrink-0">
                     {product.variants.length > 1 ? 'From' : 'Price'}
                   </span>
-                  {bundleType === "BUY_1_TAKE_1" && (
+                  
+                  {/* 🌟 LAYER UPDATE: Sub-label indicators para sa iba't ibang diskarte ng bundles mo */}
+                  {isBogo && (
                     <span className="text-[10px] font-bold text-purple-600 bg-purple-50 px-1 rounded-md mt-0.5 w-fit">
                       Get 2 items
+                    </span>
+                  )}
+                  {isMixMatch && (
+                    <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-1 rounded-md mt-0.5 w-fit">
+                      Custom Pack
+                    </span>
+                  )}
+                  {isFixedPackage && (
+                    <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-1 rounded-md mt-0.5 w-fit">
+                      Complete Set
                     </span>
                   )}
                 </div>

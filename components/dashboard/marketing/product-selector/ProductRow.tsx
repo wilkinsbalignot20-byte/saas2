@@ -1,4 +1,4 @@
-// components/dashboard/marketing/product-selector/ProductRow.tsx
+ // components/dashboard/marketing/product-selector/ProductRow.tsx
 "use client";
 
 import BundleRoleButtons from "./BundleRoleButtons";
@@ -16,9 +16,26 @@ interface Props {
 }
 
 export default function ProductRow({ product: p, rule, campaignType, onToggle, onSetBundleRole, onUpdateRule }: Props) {
+  // 🌟 LAYER UPDATE: Alamin kung ang pinoprosesong aytem ay isang bundle configuration object
+  const rawBundle = p as any;
+  const isBundle = Boolean(rawBundle.bundleType || rawBundle.tiers);
+
+  // Fallback layout mappings para sa regular products
   const firstVariant = p.variants?.[0];
-  const basePrice = Number(firstVariant?.price || 0);
-  const imgUrl = p.images?.[0] || null;
+  
+  // 🌟 LAYER UPDATE: Dynamic assignment para sa Presyo, SKU, at Larawan
+  // Kung bundle, kukunin ang price at images sa loob ng unang tier na ginawa mo sa useBundleForm
+  const basePrice = isBundle 
+    ? Number(rawBundle.tiers?.[0]?.price || 0)
+    : Number(firstVariant?.price || 0);
+
+  const imgUrl = isBundle
+    ? rawBundle.tiers?.[0]?.images || rawBundle.choices?.[0]?.imageUrl || null
+    : p.images?.[0] || null;
+
+  const displaySku = isBundle 
+    ? rawBundle.bundleType?.replace("_", " ") || "BUNDLE"
+    : firstVariant?.sku || "N/A";
 
   const isChecked = Boolean(rule);
   const isLocked = isLockedForCampaign(p.isLockedInFlashSale, campaignType);
@@ -30,13 +47,20 @@ export default function ProductRow({ product: p, rule, campaignType, onToggle, o
       <div className="flex items-center justify-between gap-3">
         {/* Product info */}
         <div className="flex items-center gap-3 text-left flex-1">
-          {imgUrl && (
+          {/* 🌟 IPAPAKITA ANG PROMO IMAGE NG BUNDLE KUNG ITO AY BUNDLE OBJECT */}
+          {imgUrl ? (
             <img src={imgUrl} alt={p.name} className="w-9 h-9 rounded-lg object-cover border border-slate-100 shrink-0" />
+          ) : (
+            /* Fallback gray box icon kung walang kahit anong larawan ang mapili */
+            <div className="w-9 h-9 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-400 shrink-0">
+              PACK
+            </div>
           )}
           <div className="space-y-0.5">
             <span className="block text-sm font-semibold text-slate-900">{p.name}</span>
             <span className="block text-xs font-medium text-slate-400">
-              SKU: {firstVariant?.sku || "N/A"} &bull; Reg. Price: {formatMoney(basePrice)}
+              {/* 🌟 AUTOMATIC DATA LINKAGE */}
+              Strategy: <span className="font-semibold text-slate-600 uppercase text-[11px]">{displaySku}</span> &bull; Reg. Price: {formatMoney(basePrice)}
             </span>
             {/* Lalabas lang kapag bawal patungan ang promo deal ng aytem */}
             {isLocked && (

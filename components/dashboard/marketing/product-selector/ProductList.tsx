@@ -1,4 +1,4 @@
-// components/dashboard/marketing/product-selector/ProductList.tsx
+ // components/dashboard/marketing/product-selector/ProductList.tsx
 "use client";
 
 import ProductRow from "./ProductRow";
@@ -39,12 +39,34 @@ export default function ProductList({
   }
 
   if (products.length === 0) {
-    return <p className="text-center text-xs text-slate-400 py-12">No inventory products found matching your search term.</p>;
+    return <p className="text-center text-xs text-slate-400 py-12">No inventory items found matching your search term.</p>;
   }
+
+  // 🌟 LAYER UPDATE: I-normalize ang bundle data para sumakto sa structure na hinahanap ng ProductRow
+  const normalizedProducts = products.map((p: any) => {
+    // Kung ito ay isang bundle campaign object (may tiers o choices)
+    if (p.bundleType || p.tiers || p.choices) {
+      // Kuhanin ang larawan mula sa unang pricing tier, o sa unang choice item, o gumamit ng placeholder
+      const bundleImage = p.tiers?.[0]?.images || p.choices?.[0]?.imageUrl || "";
+      
+      // Kuhanin ang panimulang presyo mula sa unang tier para hindi maging ₱0.00 ang Display Price
+      const bundlePrice = p.tiers?.[0]?.price ? String(p.tiers[0].price) : "0";
+
+      return {
+        ...p,
+        // I-override ang fields para awtomatikong mabasa ng existing ProductRow configuration mo
+        image: p.image || bundleImage,
+        imageUrl: p.imageUrl || bundleImage,
+        price: p.price || bundlePrice,
+        sku: p.sku || "BUNDLE", // Palitan ang N/A ng malinis na indicator text
+      };
+    }
+    return p;
+  });
 
   return (
     <div className="divide-y divide-slate-100">
-      {products.map((p) => (
+      {normalizedProducts.map((p) => (
         <ProductRow
           key={p.id}
           product={p}

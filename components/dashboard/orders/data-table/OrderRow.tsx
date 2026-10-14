@@ -24,6 +24,9 @@ export default function OrderRow({ order, slug }: Props) {
   const safePaymentStatus = (order.paymentStatus || "").toUpperCase();
   const safeShippingStatus = (order.shippingStatus || "").toUpperCase();
 
+  // 🌟 LAYER CHECK: Alamin kung ang order na ito ay naglalaman ng bundle item
+  const hasBundleItem = order.orderItems.some(item => item.isBundle === true);
+
   return (
     <tr
       onClick={() => router.push(href)}
@@ -50,14 +53,23 @@ export default function OrderRow({ order, slug }: Props) {
         </div>
       </td>
       <td className="hidden whitespace-nowrap px-4 py-3.5 text-slate-600 tabular-nums dark:text-slate-300 lg:table-cell">
-        {itemCount} {itemCount === 1 ? "item" : "items"}
+        <div className="flex flex-col items-start gap-1">
+          <span>
+            {itemCount} {itemCount === 1 ? "item" : "items"}
+          </span>
+          
+          {/* 🌟 BUNDLE INDICATOR BADGE: Lalabas lang kung may bundle item sa order */}
+          {hasBundleItem && (
+            <span className="inline-flex items-center rounded bg-blue-50 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 ring-1 ring-inset ring-blue-700/10 dark:bg-blue-400/10 dark:text-blue-400 dark:ring-blue-400/30">
+              Contains Bundle
+            </span>
+          )}
+        </div>
       </td>
       <td className="whitespace-nowrap px-4 py-3.5">
-        {/* 🛡️ Ligtas na lookup gamit ang uppercase normalized enum parameter keys */}
         <StatusBadge status={safePaymentStatus} styles={PAYMENT_STYLES} />
       </td>
       <td className="whitespace-nowrap px-4 py-3.5">
-        {/* 🛡️ Ligtas na lookup gamit ang uppercase normalized enum parameter keys */}
         <StatusBadge status={safeShippingStatus} styles={SHIPPING_STYLES} />
       </td>
       <td className="whitespace-nowrap px-4 py-3.5 text-right font-semibold text-slate-900 tabular-nums dark:text-slate-100">

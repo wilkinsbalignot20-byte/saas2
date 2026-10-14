@@ -22,6 +22,8 @@ interface TenantStorefrontProps {
 export default async function TenantStorefrontPage({ params }: TenantStorefrontProps) {
   const { slug } = await params;
 
+// 🌟 HANAPIN AT I-UPDATE LAMANG ANG INCLUDE BLOCK NA ITO:
+
   const storeData = await prisma.store.findUnique({
     where: { slug: slug },
     include: {
@@ -38,6 +40,14 @@ export default async function TenantStorefrontPage({ params }: TenantStorefrontP
       campaigns: {
         include: {
           rules: true 
+        }
+      },
+      // 🌟 IDINAGDAG PARA SA BUNDLES DATA FETCHING ENGINE:
+      // Awtomatikong kukunin ng Prisma ang mga gawa mong bundles (gaya ng sasakyan5) kasama ang tiers nito
+      bundles: {
+        include: {
+          tiers: true,
+          choices: true
         }
       }
     }
@@ -184,38 +194,53 @@ export default async function TenantStorefrontPage({ params }: TenantStorefrontP
           </div>
         )}
  
-        {/* BUNDLE PACKS LAYOUT */}
-        {activeBundles.filter((b: any) => b.type === 'BUNDLE').length > 0 && (
+        {/* 🌟 LAYOUT UPDATE: Isama ang MIX_AND_MATCH at FIXED_PACKAGE sa filter condition ng block */}
+        {activeBundles.filter((b: any) => b.type === 'BUNDLE' || b.type === 'MIX_AND_MATCH' || b.type === 'FIXED_PACKAGE').length > 0 && (
           <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-xs space-y-4">
             <div className="flex items-center gap-2">
               <span className="text-lg font-bold text-slate-900 tracking-tight">🔥 Featured Bundle Combo Packs</span>
             </div>
+            
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {activeBundles
-                .filter((b: any) => b.type === 'BUNDLE')
+                .filter((b: any) => b.type === 'BUNDLE' || b.type === 'MIX_AND_MATCH' || b.type === 'FIXED_PACKAGE')
                 .map((bundle: any) => {
-                  const [cleanName, imageUrl] = bundle.name.split("||IMAGE||");
+                  // Ligtas na pag-extract ng fallback values kung walang clean image tag suffix
+                  const hasImageDelimiter = bundle.name.includes("||IMAGE||");
+                  const [cleanName, imageUrl] = hasImageDelimiter 
+                    ? bundle.name.split("||IMAGE||")
+                    : [bundle.name, bundle.rules?.[0]?.imageUrl || ""]; // Fallback sa choice array images kung meron
+
+                  // Dynamic rendering tags para sa badge types sa loob ng combo card
+                  const isMixMatch = bundle.type === "MIX_AND_MATCH";
+                  const badgeText = isMixMatch ? "Mix & Match Deal" : "Package Bundle Deal";
+                  const badgeColor = isMixMatch 
+                    ? "bg-emerald-50 text-emerald-700 ring-1 ring-emerald-700/10" 
+                    : "bg-indigo-50 text-indigo-700 ring-1 ring-indigo-700/10";
+
                   return (
                     <div key={bundle.id} className="flex flex-col sm:flex-row gap-4 border border-slate-100 bg-slate-50/50 rounded-xl p-4 transition hover:shadow-xs group">
                       {imageUrl && (
-                        <div className="w-full sm:w-32 h-24 rounded-lg overflow-hidden shrink-0 border border-slate-200">
+                        <div className="w-full sm:w-32 h-24 rounded-lg overflow-hidden shrink-0 border border-slate-200 bg-white">
                           <img src={imageUrl} alt={cleanName} className="w-full h-full object-cover group-hover:scale-105 transition duration-200" />
                         </div>
                       )}
                       <div className="flex flex-col justify-between flex-1 space-y-2">
                         <div className="space-y-1">
-                          <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-0.5 text-xs font-semibold text-indigo-700 ring-1 ring-inset ring-indigo-700/10 w-fit">
-                            Package Bundle Deal
+                          <span className={`inline-flex items-center rounded-md px-2 py-0.5 text-xs font-semibold w-fit ${badgeColor}`}>
+                            {badgeText}
                           </span>
                           <h4 className="text-sm font-bold text-slate-900 leading-tight">{cleanName}</h4>
-                          <p className="text-xs text-slate-400">Bumili ng set para sa mas malaking bawas-presyo!</p>
+                          <p className="text-xs text-slate-400">
+                            {isMixMatch ? "Piliin ang sariling kumbinasyon ng mga aytem!" : "Bumili ng set para sa mas malaking bawas-presyo!"}
+                          </p>
                         </div>
                         <button
                           type="button"
                           style={{ backgroundColor: serializedStore.themeColor }}
                           className="w-full sm:w-fit px-3 py-1.5 rounded-lg text-white font-bold text-xs shadow-2xs hover:opacity-90 transition cursor-pointer"
                         >
-                          View Combo Pack
+                          {isMixMatch ? "Build Custom Pack" : "View Combo Pack"}
                         </button>
                       </div>
                     </div>
@@ -225,24 +250,59 @@ export default async function TenantStorefrontPage({ params }: TenantStorefrontP
           </div>
         )}
 
+        {/* 1. MAPAPANSIN MO ITO SA LOOB NG FILE MO, HUWAG GALAWIN: */}
         <SearchDiscoveryBar storeName={serializedStore.name} productCount={sanitizedProducts.length} />
 
+        {/* 2. DITO MO IPAPALIT ANG IPINASA KONG CODESMITH INTELLIGENT LAYER: */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
           <div className="lg:col-span-3">
-            <ProductGrid 
-              products={sanitizedProducts} 
-              themeColor={serializedStore.themeColor} 
-              bundles={activeBundles} 
-              flashSales={upcomingOrActiveCampaigns.filter((c: any) => c.type === 'FLASH_SALE' || c.type === 'THREE_DAY_SALE')} 
-            />
+            {/* 🌟 Pagsamahin ang regular products at dynamic database bundles */}
+            {(() => {
+              const virtualBundleItems = (serializedStore.bundles || []).map((b: any) => {
+                const bundleImage = b.tiers?.[0]?.images || b.choices?.[0]?.imageUrl || "";
+                const bundlePrice = b.tiers?.[0]?.price ? Number(b.tiers[0].price) : 0;
+
+                return {
+                  id: b.id,
+                  name: b.name,
+                  description: b.description || "Special promo package deal available on storefront.",
+                  images: bundleImage ? [bundleImage] : [],
+                  variants: [
+                    {
+                      id: `v-var-${b.id}`,
+                      price: bundlePrice,
+                      sku: b.bundleType || "BUNDLE"
+                    }
+                  ],
+                  isVirtualBundle: true,
+                  bundleStrategyType: b.bundleType
+                };
+              });
+
+              const finalCombinedGridProducts = [...sanitizedProducts, ...virtualBundleItems];
+
+              return (
+                <ProductGrid 
+                  products={finalCombinedGridProducts} 
+                  themeColor={serializedStore.themeColor} 
+                  bundles={activeBundles} 
+                  flashSales={upcomingOrActiveCampaigns.filter((c: any) => c.type === 'FLASH_SALE' || c.type === 'THREE_DAY_SALE')} 
+                />
+              );
+            })()}
           </div>
+          
+          {/* 3. ITO YUNG ASIDE TAG SA KANAN, PANATILIHING KASAMA SA PAGPAPALIT: */}
           <aside className="lg:col-span-1 lg:sticky lg:top-6">
             <MarketingSidebar store={serializedStore} vouchers={sanitizedVouchers} />
           </aside>
         </div>
       </main>
+      
       <StorefrontFooter storeName={serializedStore.name} />
     </div>
   );
 }
+
+
 

@@ -1,4 +1,4 @@
-// components/dashboard/orders/data-table/types.ts
+ // components/dashboard/orders/data-table/types.ts
 
 export interface SerializedOrderItem {
   id: string;
@@ -7,6 +7,16 @@ export interface SerializedOrderItem {
   productName: string;
   variantName: string;
   variantSku: string;
+
+  // 🌟 IDINAGDAG PARA SA BUNDLES INTEGRATION
+  // Gagamit tayo ng optional (?) para ligtas pa rin ang mga lumang orders na hindi bundle
+  isBundle?: boolean; 
+  bundleType?: "MIX_AND_MATCH" | "FIXED_PACKAGE" | string;
+  // Para sa mga piniling produkto ng customer kung MIX_AND_MATCH ang bundle strategy
+  selectedChoices?: {
+    name: string;
+    imageUrl: string;
+  }[];
 }
 
 export interface SerializedOrder {

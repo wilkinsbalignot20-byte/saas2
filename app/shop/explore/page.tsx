@@ -10,13 +10,14 @@ import CategorySidebar from '@/components/marketplace/explore/CategorySidebar';
 
 export const revalidate = 0;
 
-type FilterKey = 'new' | 'discounts' | 'regular' | 'trending';
+type FilterKey = 'new' | 'discounts' | 'regular' | 'trending' | 'bundles';
 
 const EXPLORE_FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'new', label: '✨ New' },
   { key: 'discounts', label: '🏷️ Discounts' },
   { key: 'regular', label: '📦 Regular' },
   { key: 'trending', label: '🔥 Trending' },
+  { key: 'bundles', label: '🎁 Bundles' },
 ];
 
 export default async function PublicMarketplaceExplorePage({
@@ -33,7 +34,7 @@ export default async function PublicMarketplaceExplorePage({
 
   const category = (params.category ?? '').trim();
 
-  // Binuo ang matalinong dynamic where clause para sa database filtering
+  // Binuo ang matalinong dynamic where clause para sa database filtering sa mga produkto
   const whereClause: any = {};
 
   if (q) {
@@ -44,21 +45,33 @@ export default async function PublicMarketplaceExplorePage({
     whereClause.category = { slug: category };
   }
 
-  // Prisma queries para sa mga produkto at kategorya lamang
-  const [rawProducts] = await Promise.all([
+  // 🌟 RESOLVED: Eksaktong tumutugma na sa modelo ng database mo (productBundle) at kumukuha lamang ng 'published' bundles
+  const [rawProducts, rawBundles] = await Promise.all([
     prisma.product.findMany({
-      where: Object.keys(whereClause).length > 0 ? whereClause : undefined,
+      where: Object.keys(whereClause).length > 0 ? { ...whereClause, status: 'published' } : { status: 'published' },
       include: {
         store: { select: { name: true, slug: true } },
         variants: true,
       },
       orderBy: { createdAt: 'desc' },
     }),
+    
+    // Hahatakin ang mga bundle gamit ang tamang table property at kukunin ang tiers at single choice options nito
+    prisma.productBundle.findMany({
+      where: q 
+        ? { name: { contains: q, mode: 'insensitive' }, status: 'published' }
+        : { status: 'published' },
+      include: { 
+        store: { select: { name: true, slug: true } }, 
+        tiers: true, 
+        choices: true 
+      },
+      orderBy: { createdAt: 'desc' }
+    })
   ]);
 
-  // Normalize: Kalkulahin ang panimulang presyo at tunawin ang Prisma Decimal object
+  // Normalize: Kalkulahin ang panimulang presyo at tunawin ang Prisma Decimal object sa products
   const products = rawProducts.map((p: any) => {
-    // RESOLUTION: Ginagawa nating plain JavaScript number ang price ng bawat variant para magustuhan ng Client Component
     const cleanVariants = p.variants.map((v: any) => ({
       ...v,
       price: Number(v.price),
@@ -71,7 +84,7 @@ export default async function PublicMarketplaceExplorePage({
 
     return {
       ...p,
-      variants: cleanVariants, // Ipinasa ang malinis at serialized na variants array
+      variants: cleanVariants,
       minPrice,
       hasRange,
     };
@@ -96,6 +109,44 @@ export default async function PublicMarketplaceExplorePage({
     filteredProducts = products.filter((p: any) => p.variants.length === 1);
   }
 
+  if (activeFilter === 'bundles') {
+    // 🌟 RESOLVED: Maayos na ini-map ang nakuhang ProductBundles patungo sa interface ng ProductGrid
+    filteredProducts = rawBundles.map((b: any) => {
+      // Kunin ang larawan mula sa pinaka-unang tier o di kaya ay sa pinaka-unang choice option
+      const bundleImg = b.tiers?.[0]?.images || b.choices?.[0]?.imageUrl || "";
+      
+      // Kunin ang pinakamababang presyo mula sa mga bundle tiers nito
+      const tierPrices = (b.tiers || []).map((t: any) => Number(t.price));
+      const bundlePrice = tierPrices.length ? Math.min(...tierPrices) : 0;
+
+      // Hina-harvest ang mga single items o pagpipilian (choices) na nasa loob ng bundle upang ipakita sa card description
+      const includedChoices = (b.choices || []).map((c: any) => c.name);
+      const autoDescription = includedChoices.length > 0 
+        ? `May mga pagpipilian tulad ng: ${includedChoices.join(', ')}.`
+        : "Isang espesyal na promo bundle package na sulit para sa iyong badyet.";
+
+      return {
+        id: b.id,
+        name: b.name,
+        description: b.description || autoDescription,
+        // RESOLVED IMAGE LOOKUP: Ginagawang array ang string url dahil array ang inaasahan ng ProductGrid
+        images: bundleImg ? [bundleImg] : [],
+        minPrice: bundlePrice,
+        hasRange: tierPrices.length > 1,
+        store: b.store || { name: "Independent Store", slug: "shop" },
+        variants: (b.tiers || []).map((t: any, index: number) => ({
+          id: t.id || `tier-${index}-${b.id}`,
+          name: `Package Option (${t.quantity} pcs)`,
+          price: Number(t.price),
+          sku: `${b.bundleType || 'BUNDLE'}-${t.quantity}`
+        })),
+        createdAt: b.createdAt,
+        isMarketplaceBundle: true,
+        bundleStrategy: b.bundleType || "MIX_AND_MATCH"
+      };
+    });
+  }
+
   return (
     <div className="min-h-screen bg-[#F4F6F3] text-[#1B211D] antialiased">
       {/* Announcement Strip */}
@@ -114,7 +165,7 @@ export default async function PublicMarketplaceExplorePage({
 
         {/* TWO-COLUMN CONTENT GRID */}
         <div className="flex flex-col gap-6 pt-1 md:flex-row md:items-start md:gap-8">
-          {/* SIDEBAR NAVIGATION: Listahan ng kategorya at patalastas sa ibaba */}
+          {/* SIDEBAR NAVIGATION */}
           <CategorySidebar />
 
           {/* MAIN GRID BLOCK FOR PRODUCTS */}

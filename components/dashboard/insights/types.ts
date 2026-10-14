@@ -1,4 +1,4 @@
-// components/dashboard/insights/types.ts
+ // components/dashboard/insights/types.ts
 export type RangeKey = "7d" | "30d" | "90d";
 
 export interface Metric {
@@ -19,7 +19,16 @@ export interface InsightsData {
     returningCustomers: number;
   };
   daily: { date: string; sales: number; orders: number }[];
-  topProducts: { name: string; sku: string; unitsSold: number; revenue: number }[];
+  // 🌟 LAYER UPDATE: Nilagyan nat is isBundle at bundleType field flags 
+  // gamit ang opsyonal (?) para ligtas ang mga lumang analytics entry data rules mo
+  topProducts: { 
+    name: string; 
+    sku: string; 
+    unitsSold: number; 
+    revenue: number;
+    isBundle?: boolean; 
+    bundleType?: "MIX_AND_MATCH" | "FIXED_PACKAGE" | string;
+  }[];
   fulfillment: { status: string; count: number }[];
   payment: { status: string; count: number }[];
   weekday: { day: string; orders: number; sales: number }[];
